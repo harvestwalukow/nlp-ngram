@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flask App</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/style.css') }}"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Welcome to Your Flask App</h1>
+        <p>Your Flask application is running successfully!</p>
+      </header>
+
+      <main>
+        <section class="info">
+          <h2>Getting Started</h2>
+          <p>
+            This is a basic Flask application template. You can start building
+            your features here.
+          </p>
+
+          <div class="features">
+            <div class="feature">
+              <h3>✅ Flask Setup</h3>
+              <p>Basic Flask application structure is ready</p>
+            </div>
+            <div class="feature">
+              <h3>📁 Templates</h3>
+              <p>HTML templates directory created</p>
+            </div>
+            <div class="feature">
+              <h3>🎨 Static Files</h3>
+              <p>CSS and JS directories for styling</p>
+            </div>
+          </div>
+        </section>
+
+        <section class="api-test">
+          <h2>API Health Check</h2>
+          <button id="healthCheck">Test API</button>
+          <div id="apiResult"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+  </body>
+</html>
