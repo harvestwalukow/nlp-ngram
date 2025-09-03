@@ -27,7 +27,3 @@ n-gram/
    ```bash
    python app.py
    ```
-
-3. **Access the application:**
-   - Open your browser and go to `http://localhost:5000`
-   - The API health check endpoint is available at `http://localhost:5000/api/health`
