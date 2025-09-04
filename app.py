@@ -486,6 +486,37 @@ def ui():
   .overlay {{ position: fixed; inset: 0; background: rgba(11,16,32,.9); display: none; align-items: center; justify-content: center; z-index: 50; }}
   .overlay .panel {{ background:#0e1428; border:1px solid #31406d; border-radius:16px; padding:24px 28px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.35); }}
   .overlay h2{{ margin:0 0 8px; font-size:22px; }} .overlay .desc{{ color:#a9b7d9; }}
+  
+  /* Rules Box Styles */
+  .rules-content {{ padding: 0; }}
+  .rule-section {{ margin-bottom: 16px; }}
+  .rule-section:last-child {{ margin-bottom: 0; }}
+  .rule-type {{ 
+    background: #0e1428; 
+    border: 1px solid #31406d; 
+    border-radius: 8px; 
+    padding: 12px; 
+    text-align: center;
+  }}
+  .rule-type-title {{ 
+    font-weight: bold; 
+    color: #e9eef7; 
+    margin-bottom: 4px; 
+    font-size: 14px;
+  }}
+  .rule-type-desc {{ 
+    color: #a9b7d9; 
+    font-size: 12px; 
+    line-height: 1.4;
+  }}
+  .score-badge {{ 
+    background: #263154; 
+    color: #cfe1ff; 
+    padding: 4px 8px; 
+    border-radius: 12px; 
+    font-size: 12px; 
+    font-weight: bold;
+  }}
 </style>
 </head>
 <body>
@@ -498,6 +529,58 @@ def ui():
           <div> <label>Nama Pemain 2</label> <input id="p2" type="text" value="Pemain 2" maxlength="20"/> </div>
         </div>
         <div style="margin-top:12px;"> <button id="btnStart">Start Game</button> <span id="setup-info" class="muted"></span> </div>
+      </div>
+      
+      <!-- Rules Box -->
+      <div class="card" style="margin-top: 20px;">
+        <h3 style="margin-top: 0; color: #3b82f6;">📋 Cara Bermain News N-gram Game</h3>
+        <div class="rules-content">
+          <div class="rule-section">
+            <h4 style="color: #e9eef7; margin: 12px 0 8px;">🎯 Tujuan Permainan</h4>
+            <p style="margin: 0 0 12px; color: #a9b7d9; line-height: 1.5;">
+              Lengkapi judul berita Indonesia dengan memilih kata yang tepat untuk mengisi bagian yang kosong. 
+              Semakin tepat jawabanmu, semakin tinggi skor yang didapat!
+            </p>
+          </div>
+          
+          <div class="rule-section">
+            <h4 style="color: #e9eef7; margin: 12px 0 8px;">⚡ Aturan Main</h4>
+            <ul style="margin: 0 0 12px; color: #a9b7d9; padding-left: 20px; line-height: 1.6;">
+              <li><strong>2 Pemain</strong> - Bergantian menjawab soal</li>
+              <li><strong>7 Soal per Pemain</strong> - Total 14 soal dalam 1 game</li>
+              <li><strong>Waktu Terbatas</strong> - 10 detik untuk soal normal, 15 detik untuk soal sulit</li>
+              <li><strong>Skor Berbeda</strong> - 100, 75, 50, atau 25 poin tergantung ketepatan</li>
+              <li><strong>Soal Sulit</strong> - Muncul setelah 3 jawaban benar berturut-turut</li>
+            </ul>
+          </div>
+          
+          <div class="rule-section">
+            <h4 style="color: #e9eef7; margin: 12px 0 8px;">🔥 Jenis Soal</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+              <div class="rule-type">
+                <div class="rule-type-title">📰 Soal Normal</div>
+                <div class="rule-type-desc">Pilih 1 kata untuk melengkapi judul berita</div>
+              </div>
+              <div class="rule-type">
+                <div class="rule-type-title">🔥 Soal Sulit</div>
+                <div class="rule-type-desc">Pilih 2 kata untuk melengkapi 2 bagian kosong</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="rule-section">
+            <h4 style="color: #e9eef7; margin: 12px 0 8px;">🏆 Sistem Skor</h4>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+              <span class="score-badge">100 poin</span>
+              <span class="score-badge">75 poin</span>
+              <span class="score-badge">50 poin</span>
+              <span class="score-badge">25 poin</span>
+            </div>
+            <p style="margin: 0; color: #a9b7d9; font-size: 13px; text-align: center;">
+              Skor berdasarkan seberapa cocok kata yang dipilih dengan konteks berita
+            </p>
+          </div>
+        </div>
       </div>
       <div id="step-play" style="display:none;">
         <div id="difficulty-notice" class="special" style="text-align:center; margin-bottom: 16px;"></div>
