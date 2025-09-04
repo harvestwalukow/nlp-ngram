@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field, constr
 # Config
 # =========================
 PORT = int(os.getenv("PORT", 8000))
-NEWS_CSV = os.getenv("NEWS_CSV", "data\judul_fix.csv")
+NEWS_CSV = os.getenv("NEWS_CSV", "data/judul_fix.csv")
 TIME_PER_QUESTION = int(os.getenv("TIME_PER_QUESTION", 10))
 TIME_PER_QUESTION_HARD = int(os.getenv("TIME_PER_QUESTION_HARD", 15))
 QUESTIONS_PER_PLAYER = int(os.getenv("QUESTIONS_PER_PLAYER", 7))
@@ -287,7 +287,8 @@ class GameEngine:
 # =========================
 # FastAPI & Schemas
 # =========================
-class SessionCreate(BaseModel): players: List[constr(min_length=1, max_length=20)] = Field(..., min_items=2, max_items=2)
+class SessionCreate(BaseModel): 
+    players: List[str] = Field(..., min_length=1, max_length=20, min_items=2, max_items=2)
 class AnswerPost(BaseModel): session_id: str; question_id: str; answer_text: str
 
 app = FastAPI(title="News N-gram Game Backend (Dynamic Difficulty)", default_response_class=ORJSONResponse)
@@ -342,6 +343,143 @@ def ui():
   .choiceBtn.selected {{ background: #f59e0b; }}
   .choiceBtn.correct {{ background: #22c55e; }}
   .choiceBtn.incorrect {{ background: #ef4444; opacity: 0.7; }}
+  
+  /* New Two-Player Layout Styles */
+  .game-container {{ 
+    display: flex; 
+    gap: 20px; 
+    align-items: flex-start; 
+    min-height: 400px;
+    position: relative;
+  }}
+  .player-section {{ 
+    flex: 1; 
+    background: #171c31; 
+    border: 1px solid #263154; 
+    border-radius: 14px; 
+    padding: 18px; 
+    display: flex; 
+    flex-direction: column;
+    min-height: 350px;
+    transition: all 0.3s ease;
+  }}
+  .player-section.active {{ 
+    border: 2px solid #3b82f6; 
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+  }}
+  .player-section.inactive {{ 
+    opacity: 0.6;
+  }}
+  .player-title {{ 
+    font-size: 18px; 
+    font-weight: bold; 
+    margin-bottom: 12px; 
+    color: #e9eef7;
+  }}
+  .player-score {{ 
+    font-size: 14px; 
+    color: #a9b7d9; 
+    margin-bottom: 16px;
+    padding: 8px;
+    background: #0e1428;
+    border-radius: 8px;
+    text-align: center;
+  }}
+  .player-question {{ 
+    font-size: 16px; 
+    line-height: 1.4; 
+    padding: 14px; 
+    background: #0e1428; 
+    border: 1px dashed #31406d; 
+    border-radius: 10px; 
+    margin-bottom: 16px;
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }}
+  .player-choices {{ 
+    margin-top: auto;
+  }}
+  .choice-grid {{ 
+    display: grid; 
+    grid-template-columns: 1fr 1fr; 
+    gap: 12px; 
+  }}
+  .choice-btn {{ 
+    background: #263154; 
+    color: #e9eef7; 
+    border: 1px solid #31406d; 
+    border-radius: 8px; 
+    padding: 12px 8px; 
+    text-align: center; 
+    font-size: 14px; 
+    cursor: pointer; 
+    transition: all 0.2s ease;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }}
+  .choice-btn:hover:not(:disabled) {{ 
+    background: #31406d; 
+    border-color: #3b82f6;
+  }}
+  .choice-btn:disabled {{ 
+    opacity: 0.5; 
+    cursor: not-allowed; 
+  }}
+  .choice-btn.correct {{ 
+    background: #22c55e; 
+    border-color: #16a34a;
+  }}
+  .choice-btn.incorrect {{ 
+    background: #ef4444; 
+    border-color: #dc2626;
+    opacity: 0.7;
+  }}
+  .central-elements {{ 
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    justify-content: center; 
+    min-width: 120px;
+    padding: 0 10px;
+  }}
+  .time-display {{ 
+    background: #263154; 
+    color: #e9eef7; 
+    padding: 12px; 
+    border-radius: 50%; 
+    width: 60px; 
+    height: 60px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    font-weight: bold; 
+    font-size: 14px;
+    margin-bottom: 16px;
+  }}
+  .question-counter {{ 
+    background: #0e1428; 
+    color: #a9b7d9; 
+    padding: 8px 12px; 
+    border-radius: 12px; 
+    font-size: 12px; 
+    text-align: center;
+    border: 1px solid #31406d;
+  }}
+  .current-player {{ 
+    background: #3b82f6; 
+    color: white; 
+    padding: 6px 12px; 
+    border-radius: 12px; 
+    font-size: 12px; 
+    font-weight: bold;
+    text-align: center;
+    margin-top: 8px;
+  }}
   #hardQuestionControls {{ display: none; text-align: center; margin-top: 10px; }}
   .hard-choices {{ border: 1px solid #4a5568; padding: 8px; border-radius: 8px; margin-bottom: 8px;}}
   .hard-choices-label {{ font-size: 12px; color: #a9b7d9; margin-bottom: 4px; }}
@@ -362,14 +500,50 @@ def ui():
         <div style="margin-top:12px;"> <button id="btnStart">Start Game</button> <span id="setup-info" class="muted"></span> </div>
       </div>
       <div id="step-play" style="display:none;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div>Giliran: <span id="who" class="pill"></span></div>
-          <div>Soal <span id="qnum"></span> · <span class="timer" id="timer"></span> dtk</div>
+        <div id="difficulty-notice" class="special" style="text-align:center; margin-bottom: 16px;"></div>
+        
+        <!-- Two Player Split Layout -->
+        <div class="game-container">
+          <!-- Player 1 Section (Left) -->
+          <div class="player-section" id="player1-section">
+            <div class="player-title" id="player1-title">Pemain 1</div>
+            <div class="player-score" id="player1-score">[skor disini]</div>
+            <div class="player-question" id="player1-question">Soal disini</div>
+            <div class="player-choices" id="player1-choices">
+              <div class="choice-grid">
+                <button class="choice-btn" data-choice="a">a</button>
+                <button class="choice-btn" data-choice="b">b</button>
+                <button class="choice-btn" data-choice="c">c</button>
+                <button class="choice-btn" data-choice="d">d</button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Central Elements -->
+          <div class="central-elements">
+            <div class="time-display" id="timer">waktu</div>
+            <div class="question-counter" id="qnum">1/7 soal</div>
+            <div class="current-player" id="currentPlayer">Pemain 1</div>
+          </div>
+          
+          <!-- Player 2 Section (Right) -->
+          <div class="player-section" id="player2-section">
+            <div class="player-title" id="player2-title">Pemain 2</div>
+            <div class="player-score" id="player2-score">[skor disini]</div>
+            <div class="player-question" id="player2-question">Soal disini</div>
+            <div class="player-choices" id="player2-choices">
+              <div class="choice-grid">
+                <button class="choice-btn" data-choice="a">a</button>
+                <button class="choice-btn" data-choice="b">b</button>
+                <button class="choice-btn" data-choice="c">c</button>
+                <button class="choice-btn" data-choice="d">d</button>
+              </div>
+            </div>
+          </div>
         </div>
-        <div id="difficulty-notice" class="special" style="text-align:center; margin-top: 8px;"></div>
-        <div class="titlebox mono" id="titleBox">...</div>
-        <div id="choicesBox1" class="choicesContainer"></div>
-        <div id="hardQuestionControls">
+        
+        <!-- Hidden elements for hard questions -->
+        <div id="hardQuestionControls" style="display:none;">
             <div class="hard-choices">
               <div class="hard-choices-label">PILIHAN KATA PERTAMA</div>
               <div id="choicesBox2" class="choicesContainer"></div>
@@ -400,6 +574,7 @@ const TIME_PER_QUESTION = {TIME_PER_QUESTION};
 const TOTAL_QUESTIONS = QUESTIONS_PER_PLAYER * 2; 
 let sessionId = null, index = 1, currentQ = null, timerId = null, deadline = 0;
 let playerNames = {{}}, selections = {{}};
+let playerScores = {{ p1: [], p2: [] }};
 
 function $(id){{ return document.getElementById(id); }}
 function setStep(step){{
@@ -408,44 +583,123 @@ function setStep(step){{
   $("step-result").style.display= step==="result"?"block":"none";
 }}
 async function startGame(){{
-  const p1 = $("p1").value.trim() || "Pemain 1";
-  const p2 = $("p2").value.trim() || "Pemain 2";
-  playerNames = {{ p1, p2 }};
-  const body = {{ players:[p1, p2] }};
-  const r = await fetch("/session",{{method:"POST", headers:{{"Content-Type":"application/json"}}, body:JSON.stringify(body)}});
-  const js = await r.json();
-  if(!js.session_id){{ alert("Gagal membuat sesi"); return; }}
-  sessionId = js.session_id; index = 1;
-  setStep("play");
-  await loadQuestion();
+  try {{
+    const p1 = $("p1").value.trim() || "Pemain 1";
+    const p2 = $("p2").value.trim() || "Pemain 2";
+    playerNames = {{ p1, p2 }};
+    
+    // Initialize scores
+    playerScores = {{ p1: [], p2: [] }};
+    updateScores();
+    
+    console.log("Starting game with players:", playerNames);
+    
+    const body = {{ players:[p1, p2] }};
+    const r = await fetch("/session",{{method:"POST", headers:{{"Content-Type":"application/json"}}, body:JSON.stringify(body)}});
+    const js = await r.json();
+    
+    console.log("Session response:", js);
+    
+    if(!js.session_id){{ 
+      alert("Gagal membuat sesi: " + (js.message || "Unknown error")); 
+      return; 
+    }}
+    
+    sessionId = js.session_id; 
+    index = 1;
+    setStep("play");
+    await loadQuestion();
+  }} catch (error) {{
+    console.error("Error starting game:", error);
+    alert("Error starting game: " + error.message);
+  }}
 }}
 async function loadQuestion(){{
-  clearInterval(timerId);
-  $("feedback").innerHTML = ""; $("difficulty-notice").innerHTML = ""; selections = {{}};
-  $("who").textContent = playerNames[index <= TOTAL_QUESTIONS/2 ? 'p1' : 'p2'];
-  $("qnum").textContent = `${{index}}/${{TOTAL_QUESTIONS}}`;
+  try {{
+    clearInterval(timerId);
+    $("feedback").innerHTML = ""; $("difficulty-notice").innerHTML = ""; selections = {{}};
+    
+    const currentPlayer = index <= TOTAL_QUESTIONS/2 ? 'p1' : 'p2';
+    const currentPlayerName = playerNames[currentPlayer];
+    
+    console.log("Loading question", index, "for player", currentPlayerName);
+    
+    // Update central elements
+    $("qnum").textContent = `${{index}}/${{TOTAL_QUESTIONS}}`;
+    $("currentPlayer").textContent = currentPlayerName;
+    
+    // Update player sections
+    updatePlayerSections(currentPlayer);
 
-  const r = await fetch(`/question?session_id=${{sessionId}}&index=${{index}}`);
-  const js = await r.json();
-  if(js.status!=="ok"){{ alert(js.message); return; }}
-  currentQ = js;
-  $("titleBox").textContent = js.display_title_full;
-  ["choicesBox1", "choicesBox2", "choicesBox3"].forEach(id => $(id).innerHTML = "");
+    const r = await fetch(`/question?session_id=${{sessionId}}&index=${{index}}`);
+    const js = await r.json();
+    
+    console.log("Question response:", js);
+    
+    if(js.status!=="ok"){{ 
+      alert("Error loading question: " + (js.message || "Unknown error")); 
+      return; 
+    }}
+    currentQ = js;
+  
+  // Update the active player's question
+  const activePlayerSection = currentPlayer === 'p1' ? 'player1' : 'player2';
+  $(`${{activePlayerSection}}-question`).textContent = js.display_title_full;
+  
+  // Clear all choice buttons and reset their state
+  document.querySelectorAll('.choice-btn').forEach(btn => {{
+    btn.disabled = false;
+    btn.className = 'choice-btn';
+    btn.onclick = null;
+  }});
+  
+  // Hide hard question controls initially
+  $("hardQuestionControls").style.display = "none";
 
   if (js.is_hard) {{
       $("difficulty-notice").textContent = "🔥 SOAL SULIT: Pilih 2 Kata! 🔥";
-      $("choicesBox1").style.display = "none";
       $("hardQuestionControls").style.display = "block";
+      // Clear previous hard question choices
+      ["choicesBox2", "choicesBox3"].forEach(id => $(id).innerHTML = "");
       js.choices_sets[0].forEach(c => createChoiceButton(c.text, 1, "choicesBox2"));
       js.choices_sets[1].forEach(c => createChoiceButton(c.text, 2, "choicesBox3"));
   }} else {{
-      $("hardQuestionControls").style.display = "none";
-      $("choicesBox1").style.display = "grid";
-      js.choices_sets[0].forEach(c => createChoiceButton(c.text, 1, "choicesBox1"));
+      // Update choice buttons for normal questions
+      const choiceButtons = document.querySelectorAll(`#${{activePlayerSection}}-choices .choice-btn`);
+      js.choices_sets[0].forEach((choice, idx) => {{
+        if (choiceButtons[idx]) {{
+          choiceButtons[idx].textContent = choice.text;
+          choiceButtons[idx].onclick = () => submitAnswer(choice.text);
+        }}
+      }});
   }}
-  deadline = js.expires_at*1000;
-  tick();
-  timerId = setInterval(tick, 200);
+    deadline = js.expires_at*1000;
+    tick();
+    timerId = setInterval(tick, 200);
+  }} catch (error) {{
+    console.error("Error loading question:", error);
+    alert("Error loading question: " + error.message);
+  }}
+}}
+
+function updatePlayerSections(activePlayer) {{
+  // Update player titles and visual states
+  $("player1-title").textContent = `Pemain 1${{activePlayer === 'p1' ? ' (Aktif)' : ''}}`;
+  $("player2-title").textContent = `Pemain 2${{activePlayer === 'p2' ? ' (Aktif)' : ''}}`;
+  
+  // Update visual states
+  $("player1-section").className = `player-section${{activePlayer === 'p1' ? ' active' : ' inactive'}}`;
+  $("player2-section").className = `player-section${{activePlayer === 'p2' ? ' active' : ' inactive'}}`;
+  
+  // Update scores
+  updateScores();
+  
+  // Reset question displays for inactive player
+  if (activePlayer === 'p1') {{
+    $("player2-question").textContent = "Menunggu giliran...";
+  }} else {{
+    $("player1-question").textContent = "Menunggu giliran...";
+  }}
 }}
 function createChoiceButton(text, group, containerId) {{
     const btn = document.createElement("button");
@@ -463,13 +717,22 @@ function handleHardSelection(btn, group) {{
     selections[group] = btn.textContent;
     $("submitHard").disabled = !(selections[1] && selections[2]);
 }}
-$("submitHard").onclick = () => {{
-    const combinedAnswer = `${{selections[1]}}||${{selections[2]}}`;
-    submitAnswer(combinedAnswer);
-}};
+// Initialize hard question submit handler
+function initHardQuestionHandler() {{
+  const submitBtn = $("submitHard");
+  if (submitBtn) {{
+    submitBtn.onclick = () => {{
+      const combinedAnswer = `${{selections[1]}}||${{selections[2]}}`;
+      submitAnswer(combinedAnswer);
+    }};
+  }}
+}}
 async function submitAnswer(answerText){{
+  // Disable all buttons
+  document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
   document.querySelectorAll('.choiceBtn').forEach(b => b.disabled = true);
   $("submitHard").disabled = true;
+  
   const isTimeout = !answerText;
   const payload = {{ session_id: sessionId, question_id: currentQ.question_id, answer_text: isTimeout ? "" : answerText }};
   const r = await fetch("/answer",{{method:"POST", headers:{{"Content-Type":"application/json"}}, body:JSON.stringify(payload)}});
@@ -478,6 +741,12 @@ async function submitAnswer(answerText){{
   
   if (js.status === "ok" || js.status === "timeout") {{
     const score = js.score_bucket;
+    const currentPlayer = index <= TOTAL_QUESTIONS/2 ? 'p1' : 'p2';
+    
+    // Update scores
+    playerScores[currentPlayer].push(score);
+    updateScores();
+    
     let feedbackHTML = `<div class="${{score >= 50 ? 'ok' : 'bad'}}">Skor: <b class="score">${{score}}</b></div>`;
     if (js.is_hard) {{
         feedbackHTML += `<div>Jawaban Benar: <b>${{js.blank_texts[0]}}</b> & <b>${{js.blank_texts[1]}}</b></div>`;
@@ -493,7 +762,9 @@ async function submitAnswer(answerText){{
   setTimeout(nextStep, 3500);
 }}
 function highlightNormalChoices(goldText) {{
-    $("choicesBox1").querySelectorAll('.choiceBtn').forEach(b => {{
+    const currentPlayer = index <= TOTAL_QUESTIONS/2 ? 'p1' : 'p2';
+    const activePlayerSection = currentPlayer === 'p1' ? 'player1' : 'player2';
+    $(`${{activePlayerSection}}-choices`).querySelectorAll('.choice-btn').forEach(b => {{
         if (b.textContent === goldText) b.classList.add('correct');
         else if (b.classList.contains('selected')) b.classList.add('incorrect');
     }});
@@ -552,10 +823,18 @@ function tick(){{
     submitAnswer(null);
   }}
 }}
+
+function updateScores() {{
+  const p1Total = playerScores.p1.reduce((a, b) => a + b, 0);
+  const p2Total = playerScores.p2.reduce((a, b) => a + b, 0);
+  $("player1-score").textContent = `Skor: ${{p1Total}}`;
+  $("player2-score").textContent = `Skor: ${{p2Total}}`;
+}}
 document.addEventListener("DOMContentLoaded", ()=>{{
   $("setup-info").innerHTML = `${{QUESTIONS_PER_PLAYER}} soal per pemain · <b>${{TIME_PER_QUESTION}} dtk/soal</b>`;
   setStep("setup");
   $("btnStart").onclick = startGame;
+  initHardQuestionHandler();
 }});
 </script>
 </body>
