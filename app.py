@@ -403,56 +403,169 @@ def ui():
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>News N-gram Game (Multi-Mode)</title>
 <style>
-  :root {{ font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }}
-  body {{ margin: 0; background:#0b1020; color:#e9eef7; }}
-  .wrap {{ max-width: 820px; margin: 24px auto; padding: 16px; }}
-  .card {{ background:#171c31; border:1px solid #263154; border-radius:14px; padding:18px; box-shadow:0 6px 20px rgba(0,0,0,.25);}}
-  h1, h2, h3 {{ margin:8px 0 16px; text-align: center; }}
-  p {{ text-align: left; line-height: 1.6; }}
-  label {{ display:block; margin:8px 0 6px; font-size:14px; color:#a9b7d9;}}
-  input[type=text]{{ width:100%; box-sizing: border-box; padding:10px 12px; border-radius:10px; border:1px solid #31406d; background:#0e1428; color:#e9eef7;}}
-  button {{ background:#3b82f6; color:white; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:600;}}
-  button:disabled {{ opacity:.5; cursor:not-allowed;}}
-  .row{{ display:flex; gap:12px; }} .row > div {{ flex:1;}}
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  :root {{ font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }}
+  body {{ 
+    margin: 0; 
+    background: #ffffff; 
+    color: #000000; 
+    min-height: 100vh;
+    transition: background 0.8s ease-in-out, color 0.8s ease-in-out;
+    position: relative;
+    overflow-x: hidden;
+  }}
+  
+  body::before {{
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(68deg, #f784c5 0%, #1b602f 100%);
+    opacity: 0;
+    transition: opacity 0.8s ease-in-out;
+    z-index: -1;
+    pointer-events: none;
+  }}
+  
+  .colorful-theme body::before {{
+    opacity: 1;
+  }}
+  
+  /* Particle Effect */
+  .theme-particles {{
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+    overflow: hidden;
+  }}
+  
+  .particle {{
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    background: #f784c5;
+    border-radius: 50%;
+    animation: particleFloat 1.5s ease-out forwards;
+  }}
+  
+  @keyframes particleFloat {{
+    0% {{
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }}
+    100% {{
+      opacity: 0;
+      transform: translateY(-80vh) scale(0.5);
+    }}
+  }}
+  .wrap {{ max-width: 800px; margin: 40px auto; padding: 20px; }}
+  .card {{ 
+    background: #ffffff; 
+    border: 1px solid #e5e5e5; 
+    border-radius: 8px;
+    padding: 32px; 
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.8s ease-in-out;
+    transform: translateY(0) scale(1);
+  }}
+  
+  /* Remove card styling during gameplay */
+  .card.playing {{
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }}
+  
+  .card.theme-transitioning {{
+    animation: cardSmooth 0.8s ease-in-out;
+  }}
+  
+  @keyframes cardSmooth {{
+    0% {{ 
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }}
+    50% {{ 
+      transform: translateY(-15px) scale(0.98);
+      opacity: 0.9;
+    }}
+    100% {{ 
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }}
+  }}
+  h1, h2, h3 {{ margin: 0 0 24px; text-align: center; font-weight: 300; }}
+  h1 {{ font-size: 28px; color: #000000; }}
+  h2 {{ font-size: 24px; color: #333333; }}
+  h3 {{ font-size: 20px; color: #333333; }}
+  p {{ text-align: left; line-height: 1.6; color: #666666; }}
+  label {{ display:block; margin:8px 0 6px; font-size:14px; color:#666666;}}
+  input[type=text]{{ width:100%; box-sizing: border-box; padding:12px 16px; border-radius:4px; border:1px solid #cccccc; background:#ffffff; color:#000000; font-size:16px;}}
+  input[type=text]:focus {{ outline: none; border-color: #000000; }}
+  button {{ background:#000000; color:#ffffff; border:1px solid #000000; padding:12px 24px; border-radius:4px; cursor:pointer; font-weight:400; font-size:16px; transition: all 0.2s ease;}}
+  button:hover {{ background:#ffffff; color:#000000; }}
+  button:disabled {{ opacity:0.5; cursor:not-allowed;}}
+  .row{{ display:flex; gap:16px; }} .row > div {{ flex:1;}}
   .center-row {{ display: flex; justify-content: center; gap: 20px; margin-top: 20px; }}
-  .titlebox{{ font-size:20px; line-height:1.4; padding:14px; background:#0e1428; border:1px dashed #31406d; border-radius:10px; margin:10px 0;}}
-  .muted{{ color:#9fb1d1; font-size:13px;}}
-  .mono{{ font-family: monospace; }}
-  .pill {{ display:inline-block; padding:2px 8px; border-radius:999px; background:#263154; color:#cfe1ff; font-size:12px; }}
-  .timer {{ font-weight:800; font-size:18px; color:#ffd166; }}
-  .ok {{ color:#7bed9f; }} .bad{{ color:#f87171;}} .special{{color:#f59e0b; font-weight:bold;}}
+  .titlebox{{ 
+    font-size:18px; 
+    line-height:1.5; 
+    padding:20px; 
+    background:#f8f8f8; 
+    border:1px solid #e5e5e5; 
+    border-radius:4px; 
+    margin:16px 0; 
+    color:#000000;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }}
+  .muted{{ color:#999999; font-size:13px;}}
+  .mono{{ font-family: 'Inter', 'SF Mono', Monaco, 'Cascadia Code', monospace; }}
+  .pill {{ display:inline-block; padding:4px 12px; border-radius:16px; background:#f0f0f0; color:#000000; font-size:12px; font-weight:500; }}
+  .timer {{ font-weight:600; font-size:18px; color:#000000; }}
+  .ok {{ color:#000000; font-weight:600; }} .bad{{ color:#666666;}} .special{{color:#000000; font-weight:600;}}
   .choicesContainer {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }}
-  .choiceBtn, .mode-button {{ background: #263154; padding: 12px; text-align: center; font-size: 16px; width: 100%; box-sizing: border-box; }}
-  .choiceBtn:not(:disabled):hover, .mode-button:not(:disabled):hover {{ background: #31406d; }}
-  .choiceBtn.selected {{ background: #f59e0b; }}
-  .choiceBtn.correct {{ background: #22c55e; }}
-  .choiceBtn.incorrect {{ background: #ef4444; opacity: 0.7; }}
+  .choiceBtn, .mode-button {{ background: #ffffff; border: 1px solid #cccccc; color: #000000; padding: 12px; text-align: center; font-size: 16px; width: 100%; box-sizing: border-box; border-radius: 4px; }}
+  .choiceBtn:not(:disabled):hover, .mode-button:not(:disabled):hover {{ background: #f8f8f8; border-color: #000000; }}
+  .choiceBtn.selected {{ background: #000000; color: #ffffff; }}
+  .choiceBtn.correct {{ background: #000000; color: #ffffff; }}
+  .choiceBtn.incorrect {{ background: #f0f0f0; color: #999999; opacity: 0.7; }}
   #hardQuestionControls {{ display: none; text-align: center; margin-top: 10px; }}
-  .hard-choices {{ border: 1px solid #4a5568; padding: 8px; border-radius: 8px; margin-bottom: 8px;}}
-  .hard-choices-label {{ font-size: 12px; color: #a9b7d9; margin-bottom: 4px; }}
-  .overlay {{ position: fixed; inset: 0; background: rgba(11,16,32,.9); display: none; align-items: center; justify-content: center; z-index: 50; }}
-  .overlay .panel {{ background:#0e1428; border:1px solid #31406d; border-radius:16px; padding:24px 28px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.35); }}
-  .overlay h2{{ margin:0 0 8px; font-size:22px; }} .overlay .desc{{ color:#a9b7d9; }}
+  .hard-choices {{ border: 1px solid #e5e5e5; padding: 16px; border-radius: 4px; margin-bottom: 12px; background: #f8f8f8;}}
+  .hard-choices-label {{ font-size: 12px; color: #666666; margin-bottom: 8px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; }}
+  .overlay {{ position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 50; }}
+  .overlay .panel {{ background:#ffffff; border:1px solid #e5e5e5; border-radius:8px; padding:32px; text-align:center; box-shadow:0 4px 16px rgba(0,0,0,0.2); }}
+  .overlay h2{{ margin:0 0 16px; font-size:24px; color: #000000; }} .overlay .desc{{ color:#666666; }}
   
   /* Start Page Layout Styles */
   .start-header {{ 
-    background: #1a1f3a; 
-    border-radius: 14px; 
-    padding: 24px; 
-    margin-bottom: 20px;
+    background: #ffffff; 
+    border-radius: 8px;
+    padding: 32px; 
+    margin-bottom: 24px;
     text-align: center;
-    border: 1px solid #263154;
+    border: 1px solid #e5e5e5;
   }}
   .start-header h1 {{ 
-    margin: 0 0 24px 0; 
-    font-size: 24px; 
-    color: #e9eef7; 
+    margin: 0 0 32px 0; 
+    font-size: 28px;
+    color: #000000; 
+    font-weight: 700;
   }}
   .player-inputs {{ 
     display: flex;
     flex-direction: column;
-    gap: 12px; 
-    margin-bottom: 20px; 
+    gap: 16px; 
+    margin-bottom: 32px; 
   }}
   .input-group {{ 
     flex: 1; 
@@ -460,114 +573,441 @@ def ui():
   .input-group input {{ 
     width: 100%; 
     box-sizing: border-box; 
-    padding: 10px 12px; 
-    border-radius: 8px; 
-    border: 1px solid #31406d; 
-    background: #0e1428; 
-    color: #e9eef7; 
-    font-size: 14px; 
+    padding: 12px 16px; 
+    border-radius: 4px; 
+    border: 1px solid #cccccc; 
+    background: #ffffff; 
+    color: #000000; 
+    font-size: 16px; 
   }}
   .input-group input:focus {{ 
     outline: none; 
-    border-color: #3b82f6; 
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); 
+    border-color: #000000; 
   }}
   .mode-selection {{
     display: flex;
-    gap: 12px; 
+    gap: 16px; 
     justify-content: center;
   }}
   .mode-btn {{
-    background: #263154; 
-    color: #e9eef7; 
-    border: 1px solid #31406d; 
-    padding: 12px 20px; 
-    border-radius: 8px;
+    background: #ffffff; 
+    color: #000000; 
+    border: 1px solid #cccccc; 
+    padding: 12px 24px; 
+    border-radius: 4px;
     cursor: pointer;
     font-size: 16px; 
-    font-weight: 600;
+    font-weight: 400;
     transition: all 0.2s ease;
     flex: 1; 
     max-width: 150px; 
   }}
   .mode-btn:hover {{
-    background: #31406d; 
-    border-color: #3b82f6; 
+    background: #f8f8f8; 
+    border-color: #000000; 
   }}
   .mode-btn:active {{ 
-    background: #3b82f6; 
-    border-color: #3b82f6; 
-    color: white;
+    background: #000000; 
+    border-color: #000000; 
+    color: #ffffff;
   }}
   
   .start-rules {{ 
-    background: #e9eef7; 
-    color: #1a1f3a; 
-    border-radius: 14px; 
-    padding: 24px; 
-    border: 1px solid #cbd5e0; 
+    background: #f8f8f8; 
+    color: #000000; 
+    border-radius: 8px; 
+    padding: 32px; 
+    border: 1px solid #e5e5e5; 
   }}
   .rules-grid {{
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 16px; 
-    margin-bottom: 24px; 
+    gap: 24px; 
+    margin-bottom: 32px; 
   }}
   .rule-item {{
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    gap: 8px; 
+    gap: 12px; 
   }}
   .rule-number {{
-    background: #1a1f3a; 
-    color: white;
-    width: 32px; 
-    height: 32px; 
+    background: #000000; 
+    color: #ffffff;
+    width: 40px; 
+    height: 40px; 
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: bold;
-    font-size: 14px;
+    font-weight: 600;
+    font-size: 16px;
     flex-shrink: 0;
   }}
   .rule-text {{
     font-size: 14px;
     line-height: 1.4;
-    color: #2d3748; 
+    color: #666666; 
   }}
   
   .mode-descriptions {{
     display: flex; 
     flex-direction: column; 
-    gap: 16px; 
+    gap: 20px; 
   }}
   .mode-desc {{
-    margin-bottom: 12px; 
+    margin-bottom: 0; 
   }}
   .mode-desc-text {{
-    font-size: 14px;
-    line-height: 1.5;
-    color: #2d3748; 
+    font-size: 16px;
+    line-height: 1.6;
+    color: #000000; 
   }}
   .mode-desc-text strong {{ 
-    color: #1a1f3a; 
+    color: #000000; 
     font-weight: 600; 
+  }}
+  
+  /* Theme Toggle */
+  .theme-toggle {{
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #000000;
+    color: #ffffff;
+    border: 1px solid #000000;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 100;
+    transform: scale(1);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }}
+  .theme-toggle:hover {{
+    background: #ffffff;
+    color: #000000;
+    transform: scale(1.05);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  }}
+  .theme-toggle:active {{
+    transform: scale(0.95);
+  }}
+  
+  /* Colorful Theme */
+  .colorful-theme {{
+    --primary-bg: #f784c5;
+    --secondary-bg: #1b602f;
+    --text-primary: #ffffff;
+    --text-secondary: #000000;
+    --accent: #1b602f;
+    --border: #ffffff;
+  }}
+  
+  .colorful-theme body {{
+    background: linear-gradient(68deg, #f784c5 0%, #1b602f 100%) !important;
+    background-attachment: fixed;
+    min-height: 100vh;
+    color: #ffffff;
+  }}
+  
+  .colorful-theme {{
+    background: linear-gradient(68deg, #f784c5 0%, #1b602f 100%) !important;
+    min-height: 100vh;
+  }}
+  
+  .colorful-theme html {{
+    background: linear-gradient(68deg, #f784c5 0%, #1b602f 100%) !important;
+    min-height: 100vh;
+  }}
+  
+  .colorful-theme .card {{
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #000000;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }}
+  
+  .colorful-theme h1, .colorful-theme h2, .colorful-theme h3 {{
+    color: #1b602f;
+  }}
+  
+  .colorful-theme .start-header {{
+    background: rgba(255, 255, 255, 0.95);
+    border: none;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+  }}
+  
+  .colorful-theme .start-header h1 {{
+    color: #1b602f;
+    font-weight: 700;
+  }}
+  
+  .colorful-theme .input-group input {{
+    border: 1px solid rgba(27, 96, 47, 0.3);
+    background: rgba(255, 255, 255, 0.9);
+    color: #000000;
+    backdrop-filter: blur(5px);
+  }}
+  
+  .colorful-theme .input-group input:focus {{
+    border-color: #1b602f;
+    box-shadow: 0 0 0 3px rgba(27, 96, 47, 0.15);
+    background: rgba(255, 255, 255, 0.95);
+  }}
+  
+  .colorful-theme .mode-btn {{
+    background: #1b602f;
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 4px 16px rgba(27, 96, 47, 0.3);
+  }}
+  
+  .colorful-theme .mode-btn:hover {{
+    background: #f784c5;
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(247, 132, 197, 0.4);
+  }}
+  
+  .colorful-theme .mode-btn:active {{
+    background: #1b602f;
+    transform: translateY(0);
+    box-shadow: 0 2px 8px rgba(27, 96, 47, 0.3);
+  }}
+  
+  .colorful-theme .start-rules {{
+    background: rgba(255, 255, 255, 0.95);
+    border: none;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+  }}
+  
+  .colorful-theme .rule-number {{
+    background: linear-gradient(135deg, #f784c5 0%, #1b602f 100%);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(247, 132, 197, 0.3);
+  }}
+  
+  .colorful-theme .rule-text {{
+    color: #000000;
+  }}
+  
+  .colorful-theme .mode-desc-text {{
+    color: #000000;
+  }}
+  
+  .colorful-theme .mode-desc-text strong {{
+    color: #f784c5;
+  }}
+  
+  .colorful-theme button {{
+    background: #1b602f;
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 4px 16px rgba(27, 96, 47, 0.3);
+  }}
+  
+  .colorful-theme button:hover {{
+    background: #f784c5;
+    color: #ffffff;
+    box-shadow: 0 6px 20px rgba(247, 132, 197, 0.4);
+    transform: translateY(-1px);
+  }}
+  
+  .colorful-theme .choiceBtn, .colorful-theme .mode-button {{
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(27, 96, 47, 0.3);
+    color: #1b602f;
+    backdrop-filter: blur(5px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }}
+  
+  .colorful-theme .choiceBtn:hover, .colorful-theme .mode-button:hover {{
+    background: #f784c5;
+    border-color: transparent;
+    color: #ffffff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(247, 132, 197, 0.4);
+  }}
+  
+  .colorful-theme .choiceBtn.selected {{
+    background: #1b602f;
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 4px 16px rgba(27, 96, 47, 0.4);
+  }}
+  
+  .colorful-theme .choiceBtn.correct {{
+    background: #1b602f;
+    color: #ffffff;
+    border-color: transparent;
+    box-shadow: 0 4px 16px rgba(27, 96, 47, 0.4);
+  }}
+  
+  .colorful-theme .titlebox {{
+    background: rgba(255, 255, 255, 0.95);
+    border: none;
+    color: #000000;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(10px);
+  }}
+  
+  .colorful-theme .pill {{
+    background: #f784c5;
+    color: #ffffff;
+  }}
+  
+  .colorful-theme .timer {{
+    color: #1b602f;
+  }}
+  
+  .colorful-theme .ok {{
+    color: #1b602f;
+  }}
+  
+  .colorful-theme .special {{
+    color: #f784c5;
+  }}
+  
+  .colorful-theme .theme-toggle {{
+    background: #1b602f;
+    color: #ffffff;
+    border: 2px solid #1b602f;
+    box-shadow: 0 2px 8px rgba(27, 96, 47, 0.3);
+  }}
+  
+  .colorful-theme .theme-toggle:hover {{
+    background: #f784c5;
+    border-color: #f784c5;
+    color: #ffffff;
+    transform: scale(1.05);
+    box-shadow: 0 4px 16px rgba(247, 132, 197, 0.4);
+  }}
+  
+  .colorful-theme .theme-toggle:active {{
+    transform: scale(0.95);
+  }}
+  
+  /* Game Status Bar */
+  .game-status-bar {{
+    background: transparent;
+    padding: 12px 0;
+    margin-bottom: 16px;
+    border: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }}
+  
+  .colorful-theme .game-status-bar {{
+    background: transparent;
+  }}
+  
+  /* Countdown Timer Bar */
+  .timer-container {{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }}
+  
+  .timer-bar {{
+    width: 200px;
+    height: 8px;
+    background: #e5e5e5;
+    border-radius: 4px;
+    overflow: hidden;
+    position: relative;
+  }}
+  
+  .timer-fill {{
+    height: 100%;
+    background: #3b82f6;
+    border-radius: 4px;
+    transition: width 0.2s linear;
+    position: relative;
+  }}
+  
+  .timer-fill.warning {{
+    background: #f59e0b;
+  }}
+  
+  .timer-fill.danger {{
+    background: #ef4444;
+  }}
+  
+  .colorful-theme .timer-bar {{
+    background: rgba(255, 255, 255, 0.3);
+  }}
+  
+  .colorful-theme .timer-fill {{
+    background: #1b602f;
+  }}
+  
+  .colorful-theme .timer-fill.warning {{
+    background: #f784c5;
+  }}
+  
+  .colorful-theme .timer-fill.danger {{
+    background: #ef4444;
+  }}
+  
+  /* Theme Toggle Animation */
+  .theme-toggle.animating {{
+    animation: themeToggleSmooth 0.8s ease-in-out;
+  }}
+  
+  @keyframes themeToggleSmooth {{
+    0% {{ 
+      transform: scale(1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }}
+    50% {{ 
+      transform: scale(1.2);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }}
+    100% {{ 
+      transform: scale(1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }}
+  }}
+  
+  .colorful-theme .theme-toggle.animating {{
+    animation: colorfulThemeToggleSmooth 0.8s ease-in-out;
+  }}
+  
+  @keyframes colorfulThemeToggleSmooth {{
+    0% {{ 
+      transform: scale(1);
+      box-shadow: 0 2px 8px rgba(27, 96, 47, 0.3);
+    }}
+    50% {{ 
+      transform: scale(1.2);
+      box-shadow: 0 8px 24px rgba(247, 132, 197, 0.5);
+    }}
+    100% {{ 
+      transform: scale(1);
+      box-shadow: 0 2px 8px rgba(27, 96, 47, 0.3);
+    }}
   }}
 </style>
 </head>
 <body>
+  <button class="theme-toggle" id="themeToggle">💗💚</button>
   <div class="wrap">
     <div class="card">
-      <div id="step-home">
+      <div id="step-home" style="display:none;">
         <div class="start-header">
           <h1>Selamat Datang di News N-gram Game!</h1>
           <div class="player-inputs">
             <div class="input-group">
               <input id="player1-name" type="text" value="Pemain 1" maxlength="20" placeholder="Nama Pemain 1"/>
-            </div>
+      </div>
             <div class="input-group">
               <input id="player2-name" type="text" value="Pemain 2" maxlength="20" placeholder="Nama Pemain 2"/>
             </div>
@@ -603,7 +1043,7 @@ def ui():
               <div class="mode-desc-text">
                 <strong>Mode Uraian:</strong> Pemain harus mengetik sendiri satu kata yang paling cocok untuk mengisi bagian yang kosong.
                 <br><strong>Mode Pilihan Ganda:</strong> Pilih salah satu dari empat kata yang tersedia. Jika pemain menjawab benar 3 kali berturut-turut, maka pemain tersebut akan dihadapkan dengan soal sulit dengan 2 kata rumpang!
-              </div>
+        </div>
         </div>
       </div>
     </div>
@@ -628,12 +1068,18 @@ def ui():
       </div>
 
       <div id="step-play" style="display:none;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div class="game-status-bar">
           <div>Giliran: <span id="who" class="pill"></span></div>
-          <div>Soal <span id="qnum"></span> · <span class="timer" id="timer"></span> dtk</div>
+          <div class="timer-container">
+            <span>Soal <span id="qnum"></span></span>
+            <div class="timer-bar">
+              <div class="timer-fill" id="timerFill"></div>
         </div>
-        <div id="difficulty-notice" class="special" style="text-align:center; margin-top: 8px;"></div>
-        <div class="titlebox mono" id="titleBox">...</div>
+            <span class="timer" id="timer"></span>
+          </div>
+        </div>
+        <div id="difficulty-notice" class="special" style="text-align:center; margin-top: 8px; display: none;"></div>
+        <div class="titlebox mono" id="titleBox" style="display: none;"></div>
         
         <div id="ui-pilihan-ganda" style="display:none;">
             <div id="choicesBox1" class="choicesContainer"></div>
@@ -684,6 +1130,16 @@ function setStep(step){{
   ['home', 'mode-select', 'player-setup', 'play', 'result'].forEach(s => {{
       $(`step-${{s}}`).style.display = (s === step) ? 'block' : 'none';
   }});
+  
+  // Add/remove playing class for card styling
+  const card = document.querySelector('.card');
+  if (card) {{
+    if (step === 'play') {{
+      card.classList.add('playing');
+    }} else {{
+      card.classList.remove('playing');
+    }}
+  }}
 }}
 async function startGame(){{
   const p1 = $("p1").value.trim() || "Pemain 1";
@@ -699,22 +1155,40 @@ async function startGame(){{
 }}
 async function loadQuestion(){{
   clearInterval(timerId);
-  $("feedback").innerHTML = ""; $("difficulty-notice").innerHTML = ""; selections = {{}};
+  $("feedback").innerHTML = ""; 
+  const difficultyNotice = $("difficulty-notice");
+  difficultyNotice.innerHTML = ""; 
+  difficultyNotice.style.display = "none";
+  selections = {{}};
   $("who").textContent = playerNames[index <= TOTAL_QUESTIONS/2 ? 'p1' : 'p2'];
   $("qnum").textContent = `${{index}}/${{TOTAL_QUESTIONS}}`;
+  
+  // Reset timer bar
+  const timerFill = $("timerFill");
+  if (timerFill) {{
+    timerFill.style.width = '100%';
+    timerFill.classList.remove('warning', 'danger');
+  }}
 
   const r = await fetch(`/question?session_id=${{sessionId}}&index=${{index}}`);
   const js = await r.json();
   if(js.status!=="ok"){{ alert(js.message); return; }}
   currentQ = js;
-  $("titleBox").textContent = js.display_title_full;
+  const titleBox = $("titleBox");
+  if (js.display_title_full && js.display_title_full.trim()) {{
+    titleBox.textContent = js.display_title_full;
+    titleBox.style.display = "block";
+  }} else {{
+    titleBox.style.display = "none";
+  }}
 
   if(currentMode === 'pilihan_ganda') {{
     $("ui-pilihan-ganda").style.display = 'block';
     $("ui-uraian").style.display = 'none';
     ["choicesBox1", "choicesBox2", "choicesBox3"].forEach(id => $(id).innerHTML = "");
     if (js.is_hard) {{
-        $("difficulty-notice").textContent = "🔥 SOAL SULIT: Pilih 2 Kata! 🔥";
+        difficultyNotice.textContent = "🔥 SOAL SULIT: Pilih 2 Kata! 🔥";
+        difficultyNotice.style.display = "block";
         $("choicesBox1").style.display = "none";
         $("hardQuestionControls").style.display = "block";
         js.choices_sets[0].forEach(c => createChoiceButton(c.text, 1, "choicesBox2"));
@@ -842,6 +1316,24 @@ async function nextStep(){{
 function tick(){{
   const left = Math.max(0, Math.ceil((deadline - Date.now())/1000));
   $("timer").textContent = left;
+  
+  // Update timer bar
+  const totalTime = currentQ ? (currentQ.is_hard ? 15 : 10) : 10;
+  const percentage = (left / totalTime) * 100;
+  const timerFill = $("timerFill");
+  
+  if (timerFill) {{
+    timerFill.style.width = percentage + '%';
+    
+    // Change color based on time remaining
+    timerFill.classList.remove('warning', 'danger');
+    if (percentage <= 20) {{
+      timerFill.classList.add('danger');
+    }} else if (percentage <= 40) {{
+      timerFill.classList.add('warning');
+    }}
+  }}
+  
   if(left<=0){{
     clearInterval(timerId);
     submitAnswer(null);
@@ -849,6 +1341,68 @@ function tick(){{
 }}
 document.addEventListener("DOMContentLoaded", ()=>{{
   setStep("home");
+  
+  // Theme toggle functionality
+  let isColorfulTheme = false;
+  const themeToggle = $("themeToggle");
+  const body = document.body;
+  
+  themeToggle.onclick = () => {{
+    // Add animation classes
+    themeToggle.classList.add('animating');
+    const card = document.querySelector('.card');
+    if (card) {{
+      card.classList.add('theme-transitioning');
+    }}
+    
+    // Create particle effect
+    createParticleEffect();
+    
+    // Remove animation classes after animation completes
+    setTimeout(() => {{
+      themeToggle.classList.remove('animating');
+      if (card) {{
+        card.classList.remove('theme-transitioning');
+      }}
+    }}, 800);
+    
+    // Delay theme change for smooth effect
+    setTimeout(() => {{
+      isColorfulTheme = !isColorfulTheme;
+      if (isColorfulTheme) {{
+        body.classList.add('colorful-theme');
+        themeToggle.textContent = 'Minimalist';
+      }} else {{
+        body.classList.remove('colorful-theme');
+        themeToggle.textContent = '💗💚';
+      }}
+    }}, 100);
+  }};
+  
+  // Particle effect function
+  function createParticleEffect() {{
+    const particleContainer = document.createElement('div');
+    particleContainer.className = 'theme-particles';
+    document.body.appendChild(particleContainer);
+    
+    // Create 12 particles for better performance
+    for (let i = 0; i < 12; i++) {{
+      const particle = document.createElement('div');
+      particle.className = 'particle';
+      particle.style.left = Math.random() * 100 + '%';
+      particle.style.top = '100vh';
+      particle.style.background = isColorfulTheme ? '#1b602f' : '#f784c5';
+      particle.style.animationDelay = Math.random() * 0.3 + 's';
+      particleContainer.appendChild(particle);
+    }}
+    
+    // Remove particle container after animation
+    setTimeout(() => {{
+      if (document.body.contains(particleContainer)) {{
+        document.body.removeChild(particleContainer);
+      }}
+    }}, 1500);
+  }}
   
   // Handle mode selection and direct game start
   document.querySelectorAll('.mode-btn').forEach(btn => {{
