@@ -18,6 +18,8 @@ TIME_PER_QUESTION = int(os.getenv("TIME_PER_QUESTION", 10))
 TIME_PER_QUESTION_HARD = int(os.getenv("TIME_PER_QUESTION_HARD", 15))
 QUESTIONS_PER_PLAYER = int(os.getenv("QUESTIONS_PER_PLAYER", 7))
 MIN_FREQ = int(os.getenv("MIN_FREQ", 2))
+# PENINGKATAN KUALITAS SOAL: Atur panjang minimal kalimat
+MIN_SENTENCE_LENGTH = 8
 
 # =========================
 # Utils
@@ -150,7 +152,7 @@ class PlayerState:
 
 @dataclass
 class SessionState:
-    session_id: str; players: List[PlayerState]; questions: List[Question]; created_at: float
+    session_id: str; players: List[PlayerState]; questions: List[Question]; created_at: float; mode: str
 
 class GameEngine:
     def __init__(self):
@@ -161,25 +163,59 @@ class GameEngine:
         self.model = KNTrigramModel()
         print("Fitting N-gram model..."); self.model.fit(self.titles_original); print("Model fitting complete.")
         self.sessions: Dict[str, SessionState] = {}
-        self.eligible_indices = [i for i, toks in enumerate(self.titles_norm) if self._has_good_blank(toks)]
-        self.eligible_hard_indices = [i for i, toks in enumerate(self.titles_norm) if self._has_good_blank_for_hard(toks)]
+        # PENINGKATAN KUALITAS SOAL: Filter judul yang memenuhi syarat di awal
+        self.eligible_indices = [i for i, toks in enumerate(self.titles_norm) if self._is_eligible_for_game(toks)]
+        self.eligible_hard_indices = [i for i, toks in enumerate(self.titles_norm) if self._is_eligible_for_game(toks, hard=True)]
         print(f"Found {len(self.eligible_indices)} eligible titles for normal questions.")
         print(f"Found {len(self.eligible_hard_indices)} eligible titles for hard questions.")
 
-    def _has_good_blank(self, tokens: List[str]) -> bool: return len(tokens) >= 5 and any(is_good_blank_token(tok) for tok in tokens[1:-1])
-    def _has_good_blank_for_hard(self, tokens: List[str]) -> bool: return len(tokens) >= 7 and len([i for i, tok in enumerate(tokens) if is_good_blank_token(tok)]) >= 2
+    def _get_valid_blank_indices(self, tokens: List[str]) -> List[int]:
+        n = len(tokens)
+        # Kata rumpang tidak boleh di 2 kata pertama atau terakhir. Indeks valid: 2 s/d n-3
+        # Contoh: 8 kata (indeks 0-7), posisi valid 2, 3, 4, 5
+        if n < MIN_SENTENCE_LENGTH:
+            return []
+        
+        valid_indices = []
+        # Loop dari indeks ke-2 (posisi ketiga) hingga sebelum 2 kata terakhir
+        for i in range(2, n - 2):
+            if is_good_blank_token(tokens[i]):
+                valid_indices.append(i)
+        return valid_indices
+
+    def _is_eligible_for_game(self, tokens: List[str], hard: bool = False) -> bool:
+        if len(tokens) < MIN_SENTENCE_LENGTH:
+            return False
+        
+        valid_indices = self._get_valid_blank_indices(tokens)
+        if hard:
+            # Untuk soal sulit, butuh minimal 2 posisi valid yang tidak bersebelahan
+            if len(valid_indices) < 2:
+                return False
+            # Cek apakah ada setidaknya satu pasang yang tidak bersebelahan
+            for i in range(len(valid_indices)):
+                for j in range(i + 1, len(valid_indices)):
+                    if valid_indices[j] > valid_indices[i] + 1:
+                        return True
+            return False
+        else:
+            return bool(valid_indices)
+
     def _pick_question_indices(self, n:int, hard: bool = False)->List[int]:
         pool = self.eligible_hard_indices if hard else self.eligible_indices
         if len(pool) < n:
-            pool.extend(self.eligible_indices)
+            pool.extend(self.eligible_indices) # Fallback jika soal sulit habis
             if len(pool) < n: raise ValueError(f"Dataset tidak cukup. Butuh {n}, tersedia {len(pool)}.")
         return self.rng.sample(pool, n)
+
     def _select_two_blank_pos(self, tokens: List[str]) -> Tuple[int, int]:
-        good_indices = [i for i, tok in enumerate(tokens) if 1 <= i < len(tokens) - 1 and is_good_blank_token(tok)]
+        good_indices = self._get_valid_blank_indices(tokens)
         pos1 = self.rng.choice(good_indices)
+        # Pilih posisi kedua yang tidak bersebelahan
         good_indices2 = [i for i in good_indices if abs(i - pos1) > 1] or [i for i in good_indices if i != pos1]
         pos2 = self.rng.choice(good_indices2)
         return tuple(sorted((pos1, pos2)))
+        
     def _generate_choices(self, left_ctx, right_ctx, gold_word, exclude=None):
         distractors = self.model.generate_distractors(gold_word, k=3, exclude=exclude)
         candidates = [gold_word] + distractors
@@ -187,9 +223,23 @@ class GameEngine:
         scored.sort(key=lambda x: x['log_prob'], reverse=True)
         scores = [100, 75, 50, 25]
         return [{'text': c['text'], 'score': scores[i]} for i, c in enumerate(scored)]
+    
+    def _build_uraian_question(self, pid, index, t_idx):
+        title, ntoks = self.titles_original[t_idx], self.titles_norm[t_idx]
+        valid_pos = self._get_valid_blank_indices(ntoks)
+        pos = self.rng.choice(valid_pos) if valid_pos else len(ntoks) // 2
+        gold = ntoks[pos]
+        orig_words = title.split()
+        left, blank, right = (" ".join(ntoks[:pos]), gold, " ".join(ntoks[pos+1:]))
+        if len(orig_words) == len(ntoks): left, blank, right = " ".join(orig_words[:pos]), orig_words[pos], " ".join(orig_words[pos+1:])
+        qid = f"q_{pid}_{index:03d}_uraian"
+        expires = time.time() + TIME_PER_QUESTION
+        return Question(qid, pid, index, title, left, right, None, [blank], expires)
+
     def _build_normal_question(self, pid, index, t_idx):
         title, ntoks = self.titles_original[t_idx], self.titles_norm[t_idx]
-        pos = self.rng.choice([i for i, t in enumerate(ntoks) if is_good_blank_token(t)] or [len(ntoks)//2])
+        valid_pos = self._get_valid_blank_indices(ntoks)
+        pos = self.rng.choice(valid_pos) if valid_pos else len(ntoks) // 2
         gold = ntoks[pos]
         choices = self._generate_choices(ntoks[:pos], ntoks[pos+1:], gold)
         orig_words = title.split()
@@ -198,6 +248,7 @@ class GameEngine:
         qid = f"q_{pid}_{index:03d}_normal"
         expires = time.time() + TIME_PER_QUESTION
         return Question(qid, pid, index, title, left, right, None, [blank], expires, is_hard=False, choices_sets=[choices])
+    
     def _build_hard_question(self, pid, index, t_idx):
         title, ntoks = self.titles_original[t_idx], self.titles_norm[t_idx]
         pos1, pos2 = self._select_two_blank_pos(ntoks)
@@ -213,12 +264,24 @@ class GameEngine:
         qid = f"q_{pid}_{index:03d}_hard"
         expires = time.time() + TIME_PER_QUESTION_HARD
         return Question(qid, pid, index, title, left, right, mid, blanks, expires, is_hard=True, choices_sets=[choices1, choices2])
-    def create_session(self, p1:str, p2:str)->SessionState:
+
+    def create_session(self, p1:str, p2:str, mode:str)->SessionState:
         sid=f"s_{int(time.time()*1000)}_{self.rng.randint(1000,9999)}"
         players = [PlayerState("p1",p1), PlayerState("p2",p2)]
-        sess=SessionState(sid, players, [], time.time())
+        sess=SessionState(sid, players, [], time.time(), mode=mode)
         self.sessions[sid]=sess
         return sess
+        
+    def _score_uraian_answer(self, left_ctx, right_ctx, player_word, gold_word):
+        p_score = self.model.score_insert_word(left_ctx, right_ctx, player_word)
+        g_score = self.model.score_insert_word(left_ctx, right_ctx, gold_word)
+        r_scores = [self.model.score_insert_word(left_ctx, right_ctx, w) for w in self.model.generate_distractors(gold_word, k=20)]
+        r_median = statistics.median(r_scores) if r_scores else -10.0
+        denominator = g_score - r_median
+        if abs(denominator) < 1e-6: return 100 if p_score >= g_score else 30
+        z = clamp((p_score - r_median) / denominator, 0.0, 1.0)
+        return 30 if z < 0.25 else 50 if z < 0.5 else 70 if z < 0.8 else 100
+
     def answer(self, sid:str, qid:str, text:str)->Dict[str,Any]:
         sess, now = self.sessions.get(sid), time.time()
         if not sess: return {"status":"error", "message":"session not found"}
@@ -232,47 +295,65 @@ class GameEngine:
         if is_timeout:
             player.streak_100 = 0
             if q.is_hard: player.next_question_is_hard = False
-        elif q.is_hard:
-            raw_ans1, raw_ans2 = text.split("||") if "||" in text else (None, None)
-            ans1 = normalize_text_for_model(raw_ans1) if raw_ans1 else ""
-            ans2 = normalize_text_for_model(raw_ans2) if raw_ans2 else ""
-            correct_count = (1 if ans1 == q.blank_texts[0] else 0) + (1 if ans2 == q.blank_texts[1] else 0)
-            if correct_count == 2: bucket = 100
-            elif correct_count == 1: bucket = 50
-            
-            # ### PERUBAHAN LOGIKA DI SINI ###
-            if bucket >= 50:
-                player.next_question_is_hard = True
-            else: # bucket == 0
-                player.next_question_is_hard = False
-            player.streak_100 = 0 # Streak selalu reset setelah soal sulit
-        else: # Soal Normal
-            normalized_text = normalize_text_for_model(text)
-            chosen_option = next((c for c_set in q.choices_sets for c in c_set if c['text'] == normalized_text), None)
-            if chosen_option:
-                bucket = chosen_option['score']
-                if bucket == 100: player.streak_100 += 1
-                else: player.streak_100 = 0
-                if player.streak_100 >= 3:
-                    player.next_question_is_hard = True
-                    player.streak_100 = 0
+        
+        elif sess.mode == 'uraian':
+            player_word = normalize_text_for_model(text.split()[0] if text else "")
+            gold_word = q.blank_texts[0]
+            left_ctx = tokenize(normalize_text_for_model(q.left_text))
+            right_ctx = tokenize(normalize_text_for_model(q.right_text))
+            bucket = self._score_uraian_answer(left_ctx, right_ctx, player_word, gold_word)
+
+        elif sess.mode == 'pilihan_ganda':
+            if q.is_hard:
+                raw_ans1, raw_ans2 = text.split("||") if "||" in text else (None, None)
+                ans1 = normalize_text_for_model(raw_ans1) if raw_ans1 else ""
+                ans2 = normalize_text_for_model(raw_ans2) if raw_ans2 else ""
+                correct_count = (1 if ans1 == q.blank_texts[0] else 0) + (1 if ans2 == q.blank_texts[1] else 0)
+                if correct_count == 2: bucket = 100
+                elif correct_count == 1: bucket = 50
+                
+                if bucket >= 50: player.next_question_is_hard = True
+                else: player.next_question_is_hard = False
+                player.streak_100 = 0
+            else:
+                normalized_text = normalize_text_for_model(text)
+                chosen_option = next((c for c_set in q.choices_sets for c in c_set if c['text'] == normalized_text), None)
+                if chosen_option:
+                    bucket = chosen_option['score']
+                    if bucket == 100: player.streak_100 += 1
+                    else: player.streak_100 = 0
+                    if player.streak_100 >= 3:
+                        player.next_question_is_hard = True
+                        player.streak_100 = 0
         
         q.score_bucket = bucket; player.scores.append(bucket)
         return { "status": "timeout" if is_timeout else "ok", "score_bucket": bucket, "blank_texts": q.blank_texts, "choices_sets": q.choices_sets, "is_hard": q.is_hard }
+
     def get_question(self, sid:str, index:int)->Dict[str,Any]:
         sess = self.sessions.get(sid)
         if not sess: return {"status":"error", "message":"session not found"}
         player_id = "p1" if index <= QUESTIONS_PER_PLAYER else "p2"
         player = next(p for p in sess.players if p.id == player_id)
-        is_hard = player.next_question_is_hard
-        t_idx = self._pick_question_indices(1, hard=is_hard)[0]
         question_num_for_player = index if player_id == "p1" else index - QUESTIONS_PER_PLAYER
-        q = self._build_hard_question(player_id, question_num_for_player, t_idx) if is_hard else self._build_normal_question(player_id, question_num_for_player, t_idx)
+        
+        if sess.mode == 'uraian':
+            t_idx = self._pick_question_indices(1, hard=False)[0]
+            q = self._build_uraian_question(player_id, question_num_for_player, t_idx)
+        elif sess.mode == 'pilihan_ganda':
+            is_hard = player.next_question_is_hard
+            t_idx = self._pick_question_indices(1, hard=is_hard)[0]
+            q = self._build_hard_question(player_id, question_num_for_player, t_idx) if is_hard else self._build_normal_question(player_id, question_num_for_player, t_idx)
+        else:
+            return {"status":"error", "message":"Mode tidak valid"}
+        
         sess.questions.append(q)
-        shuffled_choices1 = self.rng.sample(q.choices_sets[0], len(q.choices_sets[0]))
-        shuffled_choices2 = self.rng.sample(q.choices_sets[1], len(q.choices_sets[1])) if q.is_hard else []
+
+        shuffled_choices1 = self.rng.sample(q.choices_sets[0], len(q.choices_sets[0])) if q.choices_sets and q.choices_sets[0] else []
+        shuffled_choices2 = self.rng.sample(q.choices_sets[1], len(q.choices_sets[1])) if q.is_hard and len(q.choices_sets) > 1 else []
         display_title = f"{q.left_text} ____ {q.middle_text or ''} {'____' if q.is_hard else ''} {q.right_text}".strip().replace("  ", " ")
-        return {"status": "ok", "question_id": q.question_id, "player_id": q.player_id, "index": index, "display_title_full": display_title, "choices_sets": [[{'text': c['text']} for c in shuffled_choices1], [{'text': c['text']} for c in shuffled_choices2]], "expires_at": q.expires_at, "is_hard": q.is_hard}
+        
+        return {"status": "ok", "question_id": q.question_id, "player_id": q.player_id, "index": index, "display_title_full": display_title, "choices_sets": [[{'text': c['text']} for c in shuffled_choices1], [{'text': c['text']} for c in shuffled_choices2]], "expires_at": q.expires_at, "is_hard": q.is_hard, "mode": sess.mode}
+
     def result(self, sid:str)->Dict[str,Any]:
         sess=self.sessions.get(sid)
         if not sess: return {"status":"error","message":"session not found"}
@@ -287,11 +368,12 @@ class GameEngine:
 # =========================
 # FastAPI & Schemas
 # =========================
-class SessionCreate(BaseModel): 
-    players: List[str] = Field(..., min_length=1, max_length=20, min_items=2, max_items=2)
+class SessionCreate(BaseModel):
+    players: List[constr(min_length=1, max_length=20)] = Field(..., min_items=2, max_items=2)
+    mode: str
 class AnswerPost(BaseModel): session_id: str; question_id: str; answer_text: str
 
-app = FastAPI(title="News N-gram Game Backend (Dynamic Difficulty)", default_response_class=ORJSONResponse)
+app = FastAPI(title="News N-gram Game (Multi-Mode)", default_response_class=ORJSONResponse)
 engine = GameEngine()
 
 @app.get("/health")
@@ -299,7 +381,7 @@ def health(): return {"status":"ok"}
 @app.post("/session")
 def create_session(payload: SessionCreate):
     global engine; engine = GameEngine() 
-    s = engine.create_session(p1=payload.players[0], p2=payload.players[1])
+    s = engine.create_session(p1=payload.players[0], p2=payload.players[1], mode=payload.mode)
     return {"session_id":s.session_id,"players":[{"id":pl.id,"name":pl.name} for pl in s.players],"total_questions":QUESTIONS_PER_PLAYER*2}
 @app.get("/question")
 def get_question(session_id: str = Query(...), index: int = Query(..., ge=1)): return engine.get_question(session_id, index)
@@ -319,18 +401,20 @@ def ui():
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>News N-gram Game (Dynamic)</title>
+<title>News N-gram Game (Multi-Mode)</title>
 <style>
   :root {{ font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }}
   body {{ margin: 0; background:#0b1020; color:#e9eef7; }}
   .wrap {{ max-width: 820px; margin: 24px auto; padding: 16px; }}
   .card {{ background:#171c31; border:1px solid #263154; border-radius:14px; padding:18px; box-shadow:0 6px 20px rgba(0,0,0,.25);}}
-  h1, h3 {{ margin:8px 0 16px; }}
+  h1, h2, h3 {{ margin:8px 0 16px; text-align: center; }}
+  p {{ text-align: left; line-height: 1.6; }}
   label {{ display:block; margin:8px 0 6px; font-size:14px; color:#a9b7d9;}}
   input[type=text]{{ width:100%; box-sizing: border-box; padding:10px 12px; border-radius:10px; border:1px solid #31406d; background:#0e1428; color:#e9eef7;}}
   button {{ background:#3b82f6; color:white; border:none; padding:10px 14px; border-radius:10px; cursor:pointer; font-weight:600;}}
   button:disabled {{ opacity:.5; cursor:not-allowed;}}
   .row{{ display:flex; gap:12px; }} .row > div {{ flex:1;}}
+  .center-row {{ display: flex; justify-content: center; gap: 20px; margin-top: 20px; }}
   .titlebox{{ font-size:20px; line-height:1.4; padding:14px; background:#0e1428; border:1px dashed #31406d; border-radius:10px; margin:10px 0;}}
   .muted{{ color:#9fb1d1; font-size:13px;}}
   .mono{{ font-family: monospace; }}
@@ -338,307 +422,84 @@ def ui():
   .timer {{ font-weight:800; font-size:18px; color:#ffd166; }}
   .ok {{ color:#7bed9f; }} .bad{{ color:#f87171;}} .special{{color:#f59e0b; font-weight:bold;}}
   .choicesContainer {{ display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }}
-  .choiceBtn {{ background: #263154; padding: 12px; text-align: center; font-size: 16px; width: 100%; box-sizing: border-box; }}
-  .choiceBtn:not(:disabled):hover {{ background: #31406d; }}
+  .choiceBtn, .mode-button {{ background: #263154; padding: 12px; text-align: center; font-size: 16px; width: 100%; box-sizing: border-box; }}
+  .choiceBtn:not(:disabled):hover, .mode-button:not(:disabled):hover {{ background: #31406d; }}
   .choiceBtn.selected {{ background: #f59e0b; }}
   .choiceBtn.correct {{ background: #22c55e; }}
   .choiceBtn.incorrect {{ background: #ef4444; opacity: 0.7; }}
-  
-  /* New Two-Player Layout Styles */
-  .game-container {{ 
-    display: flex; 
-    gap: 20px; 
-    align-items: flex-start; 
-    min-height: 400px;
-    position: relative;
-  }}
-  .player-section {{ 
-    flex: 1; 
-    background: #171c31; 
-    border: 1px solid #263154; 
-    border-radius: 14px; 
-    padding: 18px; 
-    display: flex; 
-    flex-direction: column;
-    min-height: 350px;
-    transition: all 0.3s ease;
-  }}
-  .player-section.active {{ 
-    border: 2px solid #3b82f6; 
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
-  }}
-  .player-section.inactive {{ 
-    opacity: 0.6;
-  }}
-  .player-title {{ 
-    font-size: 18px; 
-    font-weight: bold; 
-    margin-bottom: 12px; 
-    color: #e9eef7;
-  }}
-  .player-score {{ 
-    font-size: 14px; 
-    color: #a9b7d9; 
-    margin-bottom: 16px;
-    padding: 8px;
-    background: #0e1428;
-    border-radius: 8px;
-    text-align: center;
-  }}
-  .player-question {{ 
-    font-size: 16px; 
-    line-height: 1.4; 
-    padding: 14px; 
-    background: #0e1428; 
-    border: 1px dashed #31406d; 
-    border-radius: 10px; 
-    margin-bottom: 16px;
-    flex-grow: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-  }}
-  .player-choices {{ 
-    margin-top: auto;
-  }}
-  .choice-grid {{ 
-    display: grid; 
-    grid-template-columns: 1fr 1fr; 
-    gap: 12px; 
-  }}
-  .choice-btn {{ 
-    background: #263154; 
-    color: #e9eef7; 
-    border: 1px solid #31406d; 
-    border-radius: 8px; 
-    padding: 12px 8px; 
-    text-align: center; 
-    font-size: 14px; 
-    cursor: pointer; 
-    transition: all 0.2s ease;
-    min-height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }}
-  .choice-btn:hover:not(:disabled) {{ 
-    background: #31406d; 
-    border-color: #3b82f6;
-  }}
-  .choice-btn:disabled {{ 
-    opacity: 0.5; 
-    cursor: not-allowed; 
-  }}
-  .choice-btn.correct {{ 
-    background: #22c55e; 
-    border-color: #16a34a;
-  }}
-  .choice-btn.incorrect {{ 
-    background: #ef4444; 
-    border-color: #dc2626;
-    opacity: 0.7;
-  }}
-  .central-elements {{ 
-    display: flex; 
-    flex-direction: column; 
-    align-items: center; 
-    justify-content: center; 
-    min-width: 120px;
-    padding: 0 10px;
-  }}
-  .time-display {{ 
-    background: #263154; 
-    color: #e9eef7; 
-    padding: 12px; 
-    border-radius: 50%; 
-    width: 60px; 
-    height: 60px; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    font-weight: bold; 
-    font-size: 14px;
-    margin-bottom: 16px;
-  }}
-  .question-counter {{ 
-    background: #0e1428; 
-    color: #a9b7d9; 
-    padding: 8px 12px; 
-    border-radius: 12px; 
-    font-size: 12px; 
-    text-align: center;
-    border: 1px solid #31406d;
-  }}
-  .current-player {{ 
-    background: #3b82f6; 
-    color: white; 
-    padding: 6px 12px; 
-    border-radius: 12px; 
-    font-size: 12px; 
-    font-weight: bold;
-    text-align: center;
-    margin-top: 8px;
-  }}
   #hardQuestionControls {{ display: none; text-align: center; margin-top: 10px; }}
   .hard-choices {{ border: 1px solid #4a5568; padding: 8px; border-radius: 8px; margin-bottom: 8px;}}
   .hard-choices-label {{ font-size: 12px; color: #a9b7d9; margin-bottom: 4px; }}
   .overlay {{ position: fixed; inset: 0; background: rgba(11,16,32,.9); display: none; align-items: center; justify-content: center; z-index: 50; }}
   .overlay .panel {{ background:#0e1428; border:1px solid #31406d; border-radius:16px; padding:24px 28px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.35); }}
   .overlay h2{{ margin:0 0 8px; font-size:22px; }} .overlay .desc{{ color:#a9b7d9; }}
-  
-  /* Rules Box Styles */
-  .rules-content {{ padding: 0; }}
-  .rule-section {{ margin-bottom: 16px; }}
-  .rule-section:last-child {{ margin-bottom: 0; }}
-  .rule-type {{ 
-    background: #0e1428; 
-    border: 1px solid #31406d; 
-    border-radius: 8px; 
-    padding: 12px; 
-    text-align: center;
-  }}
-  .rule-type-title {{ 
-    font-weight: bold; 
-    color: #e9eef7; 
-    margin-bottom: 4px; 
-    font-size: 14px;
-  }}
-  .rule-type-desc {{ 
-    color: #a9b7d9; 
-    font-size: 12px; 
-    line-height: 1.4;
-  }}
-  .score-badge {{ 
-    background: #263154; 
-    color: #cfe1ff; 
-    padding: 4px 8px; 
-    border-radius: 12px; 
-    font-size: 12px; 
-    font-weight: bold;
-  }}
 </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>News N-gram Game</h1>
-      <div id="step-setup">
+      <div id="step-home">
+        <h1>Selamat Datang di News N-gram Game</h1>
+        <p>Uji kemampuan linguistik Anda dalam menebak kata yang hilang dari judul berita! Game ini menggunakan model N-gram untuk menilai seberapa cocok jawaban Anda dengan konteks kalimat.</p>
+        <h3>Aturan Permainan:</h3>
+        <p>1. <b>Mode Uraian:</b> Anda harus mengetik sendiri satu kata yang paling cocok untuk mengisi bagian yang kosong.</p>
+        <p>2. <b>Mode Pilihan Ganda:</b> Pilih salah satu dari empat kata yang tersedia. Hati-hati, ada sistem kesulitan dinamis! Jika Anda menjawab benar 3 kali berturut-turut, Anda akan dihadapkan dengan soal sulit dengan 2 kata rumpang!</p>
+        <div class="center-row">
+            <button id="btn-to-mode-select">Pilih Mode & Mainkan!</button>
+        </div>
+      </div>
+
+      <div id="step-mode-select" style="display:none;">
+        <h2>Pilih Mode Permainan</h2>
+        <div class="center-row">
+            <button class="mode-button" data-mode="uraian">Mode Uraian</button>
+            <button class="mode-button" data-mode="pilihan_ganda">Mode Pilihan Ganda</button>
+        </div>
+      </div>
+
+      <div id="step-player-setup" style="display:none;">
+        <h2 id="setup-title">Masukkan Nama Pemain</h2>
         <div class="row">
           <div> <label>Nama Pemain 1</label> <input id="p1" type="text" value="Pemain 1" maxlength="20"/> </div>
           <div> <label>Nama Pemain 2</label> <input id="p2" type="text" value="Pemain 2" maxlength="20"/> </div>
         </div>
-        <div style="margin-top:12px;"> <button id="btnStart">Start Game</button> <span id="setup-info" class="muted"></span> </div>
+        <div style="margin-top:12px;"> <button id="btnStart">Mulai Permainan</button> </div>
       </div>
-      
-      <!-- Rules Box -->
-      <div class="card" style="margin-top: 20px;">
-        <h3 style="margin-top: 0; color: #3b82f6;">📋 Cara Bermain News N-gram Game</h3>
-        <div class="rules-content">
-          <div class="rule-section">
-            <h4 style="color: #e9eef7; margin: 12px 0 8px;">🎯 Tujuan Permainan</h4>
-            <p style="margin: 0 0 12px; color: #a9b7d9; line-height: 1.5;">
-              Lengkapi judul berita Indonesia dengan memilih kata yang tepat untuk mengisi bagian yang kosong. 
-              Semakin tepat jawabanmu, semakin tinggi skor yang didapat!
-            </p>
-          </div>
-          
-          <div class="rule-section">
-            <h4 style="color: #e9eef7; margin: 12px 0 8px;">⚡ Aturan Main</h4>
-            <ul style="margin: 0 0 12px; color: #a9b7d9; padding-left: 20px; line-height: 1.6;">
-              <li><strong>2 Pemain</strong> - Bergantian menjawab soal</li>
-              <li><strong>7 Soal per Pemain</strong> - Total 14 soal dalam 1 game</li>
-              <li><strong>Waktu Terbatas</strong> - 10 detik untuk soal normal, 15 detik untuk soal sulit</li>
-              <li><strong>Skor Berbeda</strong> - 100, 75, 50, atau 25 poin tergantung ketepatan</li>
-              <li><strong>Soal Sulit</strong> - Muncul setelah 3 jawaban benar berturut-turut</li>
-            </ul>
-          </div>
-          
-          <div class="rule-section">
-            <h4 style="color: #e9eef7; margin: 12px 0 8px;">🔥 Jenis Soal</h4>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-              <div class="rule-type">
-                <div class="rule-type-title">📰 Soal Normal</div>
-                <div class="rule-type-desc">Pilih 1 kata untuk melengkapi judul berita</div>
-              </div>
-              <div class="rule-type">
-                <div class="rule-type-title">🔥 Soal Sulit</div>
-                <div class="rule-type-desc">Pilih 2 kata untuk melengkapi 2 bagian kosong</div>
-              </div>
-            </div>
-          </div>
-          
-          <div class="rule-section">
-            <h4 style="color: #e9eef7; margin: 12px 0 8px;">🏆 Sistem Skor</h4>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
-              <span class="score-badge">100 poin</span>
-              <span class="score-badge">75 poin</span>
-              <span class="score-badge">50 poin</span>
-              <span class="score-badge">25 poin</span>
-            </div>
-            <p style="margin: 0; color: #a9b7d9; font-size: 13px; text-align: center;">
-              Skor berdasarkan seberapa cocok kata yang dipilih dengan konteks berita
-            </p>
-          </div>
-        </div>
-      </div>
+
       <div id="step-play" style="display:none;">
-        <div id="difficulty-notice" class="special" style="text-align:center; margin-bottom: 16px;"></div>
-        
-        <!-- Two Player Split Layout -->
-        <div class="game-container">
-          <!-- Player 1 Section (Left) -->
-          <div class="player-section" id="player1-section">
-            <div class="player-title" id="player1-title">Pemain 1</div>
-            <div class="player-score" id="player1-score">[skor disini]</div>
-            <div class="player-question" id="player1-question">Soal disini</div>
-            <div class="player-choices" id="player1-choices">
-              <div class="choice-grid">
-                <button class="choice-btn" data-choice="a">a</button>
-                <button class="choice-btn" data-choice="b">b</button>
-                <button class="choice-btn" data-choice="c">c</button>
-                <button class="choice-btn" data-choice="d">d</button>
-              </div>
-            </div>
-          </div>
-          
-          <!-- Central Elements -->
-          <div class="central-elements">
-            <div class="time-display" id="timer">waktu</div>
-            <div class="question-counter" id="qnum">1/7 soal</div>
-            <div class="current-player" id="currentPlayer">Pemain 1</div>
-          </div>
-          
-          <!-- Player 2 Section (Right) -->
-          <div class="player-section" id="player2-section">
-            <div class="player-title" id="player2-title">Pemain 2</div>
-            <div class="player-score" id="player2-score">[skor disini]</div>
-            <div class="player-question" id="player2-question">Soal disini</div>
-            <div class="player-choices" id="player2-choices">
-              <div class="choice-grid">
-                <button class="choice-btn" data-choice="a">a</button>
-                <button class="choice-btn" data-choice="b">b</button>
-                <button class="choice-btn" data-choice="c">c</button>
-                <button class="choice-btn" data-choice="d">d</button>
-              </div>
-            </div>
-          </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>Giliran: <span id="who" class="pill"></span></div>
+          <div>Soal <span id="qnum"></span> · <span class="timer" id="timer"></span> dtk</div>
         </div>
+        <div id="difficulty-notice" class="special" style="text-align:center; margin-top: 8px;"></div>
+        <div class="titlebox mono" id="titleBox">...</div>
         
-        <!-- Hidden elements for hard questions -->
-        <div id="hardQuestionControls" style="display:none;">
-            <div class="hard-choices">
-              <div class="hard-choices-label">PILIHAN KATA PERTAMA</div>
-              <div id="choicesBox2" class="choicesContainer"></div>
+        <div id="ui-pilihan-ganda" style="display:none;">
+            <div id="choicesBox1" class="choicesContainer"></div>
+            <div id="hardQuestionControls">
+                <div class="hard-choices">
+                  <div class="hard-choices-label">PILIHAN KATA PERTAMA</div>
+                  <div id="choicesBox2" class="choicesContainer"></div>
+                </div>
+                <div class="hard-choices">
+                  <div class="hard-choices-label">PILIHAN KATA KEDUA</div>
+                  <div id="choicesBox3" class="choicesContainer"></div>
+                </div>
+                <button id="submitHard" disabled>Submit Jawaban Ganda</button>
             </div>
-            <div class="hard-choices">
-              <div class="hard-choices-label">PILIHAN KATA KEDUA</div>
-              <div id="choicesBox3" class="choicesContainer"></div>
-            </div>
-            <button id="submitHard" disabled>Submit Jawaban Ganda</button>
         </div>
+
+        <div id="ui-uraian" style="display:none;">
+            <form id="answerForm">
+                <label for="answer-input">Jawab (1 kata)</label>
+                <input id="answer-input" type="text" autocomplete="off" placeholder="Ketik jawabanmu lalu tekan Enter..." maxlength="40"/>
+                <div style="margin-top:10px;"><button type="submit">Submit</button></div>
+            </form>
+        </div>
+
         <div id="feedback" style="margin-top:16px;"></div>
       </div>
+
       <div id="step-result" style="display:none;">
         <h3>Hasil Akhir</h3>
         <div id="resultBox" class="mono"></div>
@@ -653,136 +514,66 @@ def ui():
 <script>
 const TRANSITION_TIME = 5;
 const QUESTIONS_PER_PLAYER = {QUESTIONS_PER_PLAYER};
-const TIME_PER_QUESTION = {TIME_PER_QUESTION};
 const TOTAL_QUESTIONS = QUESTIONS_PER_PLAYER * 2; 
-let sessionId = null, index = 1, currentQ = null, timerId = null, deadline = 0;
+let sessionId = null, index = 1, currentQ = null, timerId = null, deadline = 0, currentMode = null;
 let playerNames = {{}}, selections = {{}};
-let playerScores = {{ p1: [], p2: [] }};
 
 function $(id){{ return document.getElementById(id); }}
 function setStep(step){{
-  $("step-setup").style.display = step==="setup"?"block":"none";
-  $("step-play").style.display  = step==="play" ?"block":"none";
-  $("step-result").style.display= step==="result"?"block":"none";
+  ['home', 'mode-select', 'player-setup', 'play', 'result'].forEach(s => {{
+      $(`step-${{s}}`).style.display = (s === step) ? 'block' : 'none';
+  }});
 }}
 async function startGame(){{
-  try {{
-    const p1 = $("p1").value.trim() || "Pemain 1";
-    const p2 = $("p2").value.trim() || "Pemain 2";
-    playerNames = {{ p1, p2 }};
-    
-    // Initialize scores
-    playerScores = {{ p1: [], p2: [] }};
-    updateScores();
-    
-    console.log("Starting game with players:", playerNames);
-    
-    const body = {{ players:[p1, p2] }};
-    const r = await fetch("/session",{{method:"POST", headers:{{"Content-Type":"application/json"}}, body:JSON.stringify(body)}});
-    const js = await r.json();
-    
-    console.log("Session response:", js);
-    
-    if(!js.session_id){{ 
-      alert("Gagal membuat sesi: " + (js.message || "Unknown error")); 
-      return; 
-    }}
-    
-    sessionId = js.session_id; 
-    index = 1;
-    setStep("play");
-    await loadQuestion();
-  }} catch (error) {{
-    console.error("Error starting game:", error);
-    alert("Error starting game: " + error.message);
-  }}
+  const p1 = $("p1").value.trim() || "Pemain 1";
+  const p2 = $("p2").value.trim() || "Pemain 2";
+  playerNames = {{ p1, p2 }};
+  const body = {{ players:[p1, p2], mode: currentMode }};
+  const r = await fetch("/session",{{method:"POST", headers:{{"Content-Type":"application/json"}}, body:JSON.stringify(body)}});
+  const js = await r.json();
+  if(!js.session_id){{ alert("Gagal membuat sesi"); return; }}
+  sessionId = js.session_id; index = 1;
+  setStep("play");
+  await loadQuestion();
 }}
 async function loadQuestion(){{
-  try {{
-    clearInterval(timerId);
-    $("feedback").innerHTML = ""; $("difficulty-notice").innerHTML = ""; selections = {{}};
-    
-    const currentPlayer = index <= TOTAL_QUESTIONS/2 ? 'p1' : 'p2';
-    const currentPlayerName = playerNames[currentPlayer];
-    
-    console.log("Loading question", index, "for player", currentPlayerName);
-    
-    // Update central elements
-    $("qnum").textContent = `${{index}}/${{TOTAL_QUESTIONS}}`;
-    $("currentPlayer").textContent = currentPlayerName;
-    
-    // Update player sections
-    updatePlayerSections(currentPlayer);
+  clearInterval(timerId);
+  $("feedback").innerHTML = ""; $("difficulty-notice").innerHTML = ""; selections = {{}};
+  $("who").textContent = playerNames[index <= TOTAL_QUESTIONS/2 ? 'p1' : 'p2'];
+  $("qnum").textContent = `${{index}}/${{TOTAL_QUESTIONS}}`;
 
-    const r = await fetch(`/question?session_id=${{sessionId}}&index=${{index}}`);
-    const js = await r.json();
-    
-    console.log("Question response:", js);
-    
-    if(js.status!=="ok"){{ 
-      alert("Error loading question: " + (js.message || "Unknown error")); 
-      return; 
+  const r = await fetch(`/question?session_id=${{sessionId}}&index=${{index}}`);
+  const js = await r.json();
+  if(js.status!=="ok"){{ alert(js.message); return; }}
+  currentQ = js;
+  $("titleBox").textContent = js.display_title_full;
+
+  if(currentMode === 'pilihan_ganda') {{
+    $("ui-pilihan-ganda").style.display = 'block';
+    $("ui-uraian").style.display = 'none';
+    ["choicesBox1", "choicesBox2", "choicesBox3"].forEach(id => $(id).innerHTML = "");
+    if (js.is_hard) {{
+        $("difficulty-notice").textContent = "🔥 SOAL SULIT: Pilih 2 Kata! 🔥";
+        $("choicesBox1").style.display = "none";
+        $("hardQuestionControls").style.display = "block";
+        js.choices_sets[0].forEach(c => createChoiceButton(c.text, 1, "choicesBox2"));
+        js.choices_sets[1].forEach(c => createChoiceButton(c.text, 2, "choicesBox3"));
+    }} else {{
+        $("hardQuestionControls").style.display = "none";
+        $("choicesBox1").style.display = "grid";
+        js.choices_sets[0].forEach(c => createChoiceButton(c.text, 1, "choicesBox1"));
     }}
-    currentQ = js;
-  
-  // Update the active player's question
-  const activePlayerSection = currentPlayer === 'p1' ? 'player1' : 'player2';
-  $(`${{activePlayerSection}}-question`).textContent = js.display_title_full;
-  
-  // Clear all choice buttons and reset their state
-  document.querySelectorAll('.choice-btn').forEach(btn => {{
-    btn.disabled = false;
-    btn.className = 'choice-btn';
-    btn.onclick = null;
-  }});
-  
-  // Hide hard question controls initially
-  $("hardQuestionControls").style.display = "none";
-
-  if (js.is_hard) {{
-      $("difficulty-notice").textContent = "🔥 SOAL SULIT: Pilih 2 Kata! 🔥";
-      $("hardQuestionControls").style.display = "block";
-      // Clear previous hard question choices
-      ["choicesBox2", "choicesBox3"].forEach(id => $(id).innerHTML = "");
-      js.choices_sets[0].forEach(c => createChoiceButton(c.text, 1, "choicesBox2"));
-      js.choices_sets[1].forEach(c => createChoiceButton(c.text, 2, "choicesBox3"));
-  }} else {{
-      // Update choice buttons for normal questions
-      const choiceButtons = document.querySelectorAll(`#${{activePlayerSection}}-choices .choice-btn`);
-      js.choices_sets[0].forEach((choice, idx) => {{
-        if (choiceButtons[idx]) {{
-          choiceButtons[idx].textContent = choice.text;
-          choiceButtons[idx].onclick = () => submitAnswer(choice.text);
-        }}
-      }});
+  }} else {{ // Mode Uraian
+    $("ui-pilihan-ganda").style.display = 'none';
+    $("ui-uraian").style.display = 'block';
+    $("answer-input").value = "";
+    // PERBAIKAN BUG: Aktifkan kembali input untuk soal selanjutnya
+    $("answer-input").disabled = false;
+    $("answer-input").focus();
   }}
-    deadline = js.expires_at*1000;
-    tick();
-    timerId = setInterval(tick, 200);
-  }} catch (error) {{
-    console.error("Error loading question:", error);
-    alert("Error loading question: " + error.message);
-  }}
-}}
-
-function updatePlayerSections(activePlayer) {{
-  // Update player titles and visual states
-  $("player1-title").textContent = `Pemain 1${{activePlayer === 'p1' ? ' (Aktif)' : ''}}`;
-  $("player2-title").textContent = `Pemain 2${{activePlayer === 'p2' ? ' (Aktif)' : ''}}`;
-  
-  // Update visual states
-  $("player1-section").className = `player-section${{activePlayer === 'p1' ? ' active' : ' inactive'}}`;
-  $("player2-section").className = `player-section${{activePlayer === 'p2' ? ' active' : ' inactive'}}`;
-  
-  // Update scores
-  updateScores();
-  
-  // Reset question displays for inactive player
-  if (activePlayer === 'p1') {{
-    $("player2-question").textContent = "Menunggu giliran...";
-  }} else {{
-    $("player1-question").textContent = "Menunggu giliran...";
-  }}
+  deadline = js.expires_at*1000;
+  tick();
+  timerId = setInterval(tick, 200);
 }}
 function createChoiceButton(text, group, containerId) {{
     const btn = document.createElement("button");
@@ -800,22 +591,19 @@ function handleHardSelection(btn, group) {{
     selections[group] = btn.textContent;
     $("submitHard").disabled = !(selections[1] && selections[2]);
 }}
-// Initialize hard question submit handler
-function initHardQuestionHandler() {{
-  const submitBtn = $("submitHard");
-  if (submitBtn) {{
-    submitBtn.onclick = () => {{
-      const combinedAnswer = `${{selections[1]}}||${{selections[2]}}`;
-      submitAnswer(combinedAnswer);
-    }};
-  }}
-}}
+$("submitHard").onclick = () => {{
+    const combinedAnswer = `${{selections[1]}}||${{selections[2]}}`;
+    submitAnswer(combinedAnswer);
+}};
+$("answerForm").onsubmit = (e) => {{
+    e.preventDefault();
+    const answerText = $("answer-input").value.trim();
+    if(answerText) submitAnswer(answerText);
+}};
 async function submitAnswer(answerText){{
-  // Disable all buttons
-  document.querySelectorAll('.choice-btn').forEach(b => b.disabled = true);
   document.querySelectorAll('.choiceBtn').forEach(b => b.disabled = true);
   $("submitHard").disabled = true;
-  
+  $("answer-input").disabled = true;
   const isTimeout = !answerText;
   const payload = {{ session_id: sessionId, question_id: currentQ.question_id, answer_text: isTimeout ? "" : answerText }};
   const r = await fetch("/answer",{{method:"POST", headers:{{"Content-Type":"application/json"}}, body:JSON.stringify(payload)}});
@@ -824,19 +612,13 @@ async function submitAnswer(answerText){{
   
   if (js.status === "ok" || js.status === "timeout") {{
     const score = js.score_bucket;
-    const currentPlayer = index <= TOTAL_QUESTIONS/2 ? 'p1' : 'p2';
-    
-    // Update scores
-    playerScores[currentPlayer].push(score);
-    updateScores();
-    
     let feedbackHTML = `<div class="${{score >= 50 ? 'ok' : 'bad'}}">Skor: <b class="score">${{score}}</b></div>`;
     if (js.is_hard) {{
         feedbackHTML += `<div>Jawaban Benar: <b>${{js.blank_texts[0]}}</b> & <b>${{js.blank_texts[1]}}</b></div>`;
         highlightHardChoices(js.blank_texts);
     }} else {{
         feedbackHTML += `<div>Jawaban Benar: <b>${{js.blank_texts[0]}}</b></div>`;
-        highlightNormalChoices(js.blank_texts[0]);
+        if (currentMode === 'pilihan_ganda') highlightNormalChoices(js.blank_texts[0]);
     }}
     $("feedback").innerHTML = feedbackHTML;
   }} else {{
@@ -845,9 +627,7 @@ async function submitAnswer(answerText){{
   setTimeout(nextStep, 3500);
 }}
 function highlightNormalChoices(goldText) {{
-    const currentPlayer = index <= TOTAL_QUESTIONS/2 ? 'p1' : 'p2';
-    const activePlayerSection = currentPlayer === 'p1' ? 'player1' : 'player2';
-    $(`${{activePlayerSection}}-choices`).querySelectorAll('.choice-btn').forEach(b => {{
+    $("choicesBox1").querySelectorAll('.choiceBtn').forEach(b => {{
         if (b.textContent === goldText) b.classList.add('correct');
         else if (b.classList.contains('selected')) b.classList.add('incorrect');
     }});
@@ -906,26 +686,22 @@ function tick(){{
     submitAnswer(null);
   }}
 }}
-
-function updateScores() {{
-  const p1Total = playerScores.p1.reduce((a, b) => a + b, 0);
-  const p2Total = playerScores.p2.reduce((a, b) => a + b, 0);
-  $("player1-score").textContent = `Skor: ${{p1Total}}`;
-  $("player2-score").textContent = `Skor: ${{p2Total}}`;
-}}
 document.addEventListener("DOMContentLoaded", ()=>{{
-  $("setup-info").innerHTML = `${{QUESTIONS_PER_PLAYER}} soal per pemain · <b>${{TIME_PER_QUESTION}} dtk/soal</b>`;
-  setStep("setup");
+  setStep("home");
+  $("btn-to-mode-select").onclick = () => setStep('mode-select');
+  document.querySelectorAll('.mode-button').forEach(btn => {{
+      btn.onclick = () => {{
+          currentMode = btn.dataset.mode;
+          $("setup-title").textContent = `Masukkan Nama Pemain (Mode ${{(currentMode === 'uraian' ? 'Uraian' : 'Pilihan Ganda')}})`;
+          setStep('player-setup');
+      }}
+  }});
   $("btnStart").onclick = startGame;
-  initHardQuestionHandler();
 }});
 </script>
 </body>
 </html>
     """
-
-# For Vercel deployment
-app = app
 
 if __name__ == "__main__":
     import uvicorn
