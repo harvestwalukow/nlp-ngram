@@ -853,7 +853,7 @@ def ui():
   .colorful-theme .titlebox {{
     background: rgba(255, 255, 255, 0.95);
     border: none;
-    color: #000000;
+    color: #000000 !important;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
     backdrop-filter: blur(10px);
   }}
@@ -868,11 +868,15 @@ def ui():
   }}
   
   .colorful-theme .ok {{
-    color: #1b602f;
+    color: #ffffff !important;
+  }}
+  
+  .colorful-theme .bad {{
+    color: #ffffff !important;
   }}
   
   .colorful-theme .special {{
-    color: #f784c5;
+    color: #ffffff !important;
   }}
   
   .colorful-theme .theme-toggle {{
@@ -892,6 +896,116 @@ def ui():
   
   .colorful-theme .theme-toggle:active {{
     transform: scale(0.95);
+  }}
+  
+  /* Fix text visibility on gradient background */
+  .colorful-theme .game-status-bar {{
+    color: #ffffff !important;
+  }}
+  
+  .colorful-theme .game-status-bar span {{
+    color: #ffffff !important;
+  }}
+  
+  .colorful-theme .timer-container span {{
+    color: #ffffff !important;
+  }}
+  
+  .colorful-theme .timer {{
+    color: #ffffff !important;
+  }}
+  
+  .colorful-theme label {{
+    color: #ffffff !important;
+  }}
+  
+  .colorful-theme .feedback {{
+    color: #ffffff !important;
+  }}
+  
+  .colorful-theme .feedback .ok {{
+    color: #ffffff !important;
+  }}
+  
+  .colorful-theme .feedback .bad {{
+    color: #ffffff !important;
+  }}
+  
+  .colorful-theme .feedback b {{
+    color: #ffffff !important;
+  }}
+  
+  /* Keep question text black, make feedback text white */
+  .colorful-theme .titlebox {{
+    color: #000000 !important;
+  }}
+  
+  .colorful-theme .titlebox * {{
+    color: #000000 !important;
+  }}
+  
+  .colorful-theme #titleBox {{
+    color: #000000 !important;
+  }}
+  
+  .colorful-theme #titleBox * {{
+    color: #000000 !important;
+  }}
+  
+  .colorful-theme .feedback {{
+    color: #ffffff !important;
+  }}
+  
+  .colorful-theme .feedback div {{
+    color: #ffffff !important;
+  }}
+  
+  .colorful-theme .feedback-text {{
+    color: #ffffff !important;
+  }}
+  
+  .colorful-theme .feedback-text b {{
+    color: #ffffff !important;
+  }}
+  
+  /* Keep input field labels white but input text black */
+  .colorful-theme #ui-uraian label {{
+    color: #ffffff !important;
+  }}
+  
+  .colorful-theme #ui-uraian input {{
+    color: #000000 !important;
+    background: rgba(255, 255, 255, 0.95) !important;
+  }}
+  
+  .colorful-theme h3 {{
+    color: #ffffff !important;
+  }}
+  
+  .colorful-theme .mono {{
+    color: #ffffff !important;
+  }}
+  
+  /* Exception: titlebox should have black text */
+  .colorful-theme .titlebox.mono {{
+    color: #000000 !important;
+  }}
+  
+  .colorful-theme #titleBox.mono {{
+    color: #000000 !important;
+  }}
+  
+  /* Result page text visibility */
+  .colorful-theme #step-result h3 {{
+    color: #ffffff !important;
+  }}
+  
+  .colorful-theme #step-result .mono {{
+    color: #ffffff !important;
+  }}
+  
+  .colorful-theme #step-result b {{
+    color: #ffffff !important;
   }}
   
   /* Game Status Bar */
@@ -993,6 +1107,101 @@ def ui():
     100% {{ 
       transform: scale(1);
       box-shadow: 0 2px 8px rgba(27, 96, 47, 0.3);
+    }}
+  }}
+  
+  /* Mobile Responsiveness */
+  @media (max-width: 768px) {{
+    .wrap {{
+      margin: 20px auto;
+      padding: 10px;
+    }}
+    
+    .card {{
+      padding: 20px;
+    }}
+    
+    .start-header {{
+      padding: 20px;
+      margin-bottom: 16px;
+    }}
+    
+    .start-header h1 {{
+      font-size: 24px;
+      margin-bottom: 24px;
+    }}
+    
+    .rules-grid {{
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }}
+    
+    .rule-item {{
+      gap: 8px;
+    }}
+    
+    .rule-number {{
+      width: 32px;
+      height: 32px;
+      font-size: 14px;
+    }}
+    
+    .rule-text {{
+      font-size: 12px;
+      line-height: 1.3;
+    }}
+    
+    .start-rules {{
+      padding: 20px;
+    }}
+    
+    .mode-selection {{
+      flex-direction: column;
+      gap: 12px;
+    }}
+    
+    .mode-btn {{
+      max-width: none;
+      width: 100%;
+    }}
+    
+    .theme-toggle {{
+      top: 10px;
+      right: 10px;
+      padding: 6px 12px;
+      font-size: 12px;
+    }}
+  }}
+  
+  @media (max-width: 480px) {{
+    .rules-grid {{
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }}
+    
+    .rule-item {{
+      flex-direction: row;
+      text-align: left;
+      gap: 12px;
+      align-items: flex-start;
+    }}
+    
+    .rule-number {{
+      flex-shrink: 0;
+      margin-top: 2px;
+    }}
+    
+    .rule-text {{
+      flex: 1;
+    }}
+    
+    .start-header h1 {{
+      font-size: 20px;
+    }}
+    
+    .mode-desc-text {{
+      font-size: 14px;
     }}
   }}
 </style>
@@ -1249,10 +1458,10 @@ async function submitAnswer(answerText){{
     const score = js.score_bucket;
     let feedbackHTML = `<div class="${{score >= 50 ? 'ok' : 'bad'}}">Skor: <b class="score">${{score}}</b></div>`;
     if (js.is_hard) {{
-        feedbackHTML += `<div>Jawaban Benar: <b>${{js.blank_texts[0]}}</b> & <b>${{js.blank_texts[1]}}</b></div>`;
+        feedbackHTML += `<div class="feedback-text">Jawaban Benar: <b>${{js.blank_texts[0]}}</b> & <b>${{js.blank_texts[1]}}</b></div>`;
         highlightHardChoices(js.blank_texts);
     }} else {{
-        feedbackHTML += `<div>Jawaban Benar: <b>${{js.blank_texts[0]}}</b></div>`;
+        feedbackHTML += `<div class="feedback-text">Jawaban Benar: <b>${{js.blank_texts[0]}}</b></div>`;
         if (currentMode === 'pilihan_ganda') highlightNormalChoices(js.blank_texts[0]);
     }}
     $("feedback").innerHTML = feedbackHTML;
