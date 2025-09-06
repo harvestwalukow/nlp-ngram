@@ -433,19 +433,180 @@ def ui():
   .overlay {{ position: fixed; inset: 0; background: rgba(11,16,32,.9); display: none; align-items: center; justify-content: center; z-index: 50; }}
   .overlay .panel {{ background:#0e1428; border:1px solid #31406d; border-radius:16px; padding:24px 28px; text-align:center; box-shadow:0 10px 30px rgba(0,0,0,.35); }}
   .overlay h2{{ margin:0 0 8px; font-size:22px; }} .overlay .desc{{ color:#a9b7d9; }}
+  
+  /* Start Page Layout Styles */
+  .start-header {{ 
+    background: #1a1f3a; 
+    border-radius: 14px; 
+    padding: 24px; 
+    margin-bottom: 20px;
+    text-align: center;
+    border: 1px solid #263154;
+  }}
+  .start-header h1 {{ 
+    margin: 0 0 24px 0; 
+    font-size: 24px; 
+    color: #e9eef7; 
+  }}
+  .player-inputs {{ 
+    display: flex;
+    flex-direction: column;
+    gap: 12px; 
+    margin-bottom: 20px; 
+  }}
+  .input-group {{ 
+    flex: 1; 
+  }}
+  .input-group input {{ 
+    width: 100%; 
+    box-sizing: border-box; 
+    padding: 10px 12px; 
+    border-radius: 8px; 
+    border: 1px solid #31406d; 
+    background: #0e1428; 
+    color: #e9eef7; 
+    font-size: 14px; 
+  }}
+  .input-group input:focus {{ 
+    outline: none; 
+    border-color: #3b82f6; 
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2); 
+  }}
+  .mode-selection {{
+    display: flex;
+    gap: 12px; 
+    justify-content: center;
+  }}
+  .mode-btn {{
+    background: #263154; 
+    color: #e9eef7; 
+    border: 1px solid #31406d; 
+    padding: 12px 20px; 
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px; 
+    font-weight: 600;
+    transition: all 0.2s ease;
+    flex: 1; 
+    max-width: 150px; 
+  }}
+  .mode-btn:hover {{
+    background: #31406d; 
+    border-color: #3b82f6; 
+  }}
+  .mode-btn:active {{ 
+    background: #3b82f6; 
+    border-color: #3b82f6; 
+    color: white;
+  }}
+  
+  .start-rules {{ 
+    background: #e9eef7; 
+    color: #1a1f3a; 
+    border-radius: 14px; 
+    padding: 24px; 
+    border: 1px solid #cbd5e0; 
+  }}
+  .rules-grid {{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px; 
+    margin-bottom: 24px; 
+  }}
+  .rule-item {{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 8px; 
+  }}
+  .rule-number {{
+    background: #1a1f3a; 
+    color: white;
+    width: 32px; 
+    height: 32px; 
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+    flex-shrink: 0;
+  }}
+  .rule-text {{
+    font-size: 14px;
+    line-height: 1.4;
+    color: #2d3748; 
+  }}
+  
+  .mode-descriptions {{
+    display: flex; 
+    flex-direction: column; 
+    gap: 16px; 
+  }}
+  .mode-desc {{
+    margin-bottom: 12px; 
+  }}
+  .mode-desc-text {{
+    font-size: 14px;
+    line-height: 1.5;
+    color: #2d3748; 
+  }}
+  .mode-desc-text strong {{ 
+    color: #1a1f3a; 
+    font-weight: 600; 
+  }}
 </style>
 </head>
 <body>
   <div class="wrap">
     <div class="card">
       <div id="step-home">
-        <h1>Selamat Datang di News N-gram Game</h1>
-        <p>Uji kemampuan linguistik Anda dalam menebak kata yang hilang dari judul berita! Game ini menggunakan model N-gram untuk menilai seberapa cocok jawaban Anda dengan konteks kalimat.</p>
-        <h3>Aturan Permainan:</h3>
-        <p>1. <b>Mode Uraian:</b> Anda harus mengetik sendiri satu kata yang paling cocok untuk mengisi bagian yang kosong.</p>
-        <p>2. <b>Mode Pilihan Ganda:</b> Pilih salah satu dari empat kata yang tersedia. Hati-hati, ada sistem kesulitan dinamis! Jika Anda menjawab benar 3 kali berturut-turut, Anda akan dihadapkan dengan soal sulit dengan 2 kata rumpang!</p>
-        <div class="center-row">
-            <button id="btn-to-mode-select">Pilih Mode & Mainkan!</button>
+        <div class="start-header">
+          <h1>Selamat Datang di News N-gram Game!</h1>
+          <div class="player-inputs">
+            <div class="input-group">
+              <input id="player1-name" type="text" value="Pemain 1" maxlength="20" placeholder="Nama Pemain 1"/>
+            </div>
+            <div class="input-group">
+              <input id="player2-name" type="text" value="Pemain 2" maxlength="20" placeholder="Nama Pemain 2"/>
+            </div>
+          </div>
+      <div class="mode-selection">
+        <button class="mode-btn" data-mode="uraian">Uraian</button>
+        <button class="mode-btn" data-mode="pilihan_ganda">Pilgan</button>
+      </div>
+    </div>
+    
+        <div class="start-rules">
+        <div class="rules-grid">
+          <div class="rule-item">
+            <div class="rule-number">1</div>
+            <div class="rule-text">Setiap pemain menjawab 7 pertanyaan</div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-number">2</div>
+            <div class="rule-text">10 detik per pertanyaan</div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-number">3</div>
+            <div class="rule-text">Maksimal 100 poin untuk setiap pertanyaan</div>
+          </div>
+          <div class="rule-item">
+            <div class="rule-number">4</div>
+            <div class="rule-text">Poin terbanyak dinyatakan menang</div>
+        </div>
+      </div>
+      
+      <div class="mode-descriptions">
+        <div class="mode-desc">
+              <div class="mode-desc-text">
+                <strong>Mode Uraian:</strong> Pemain harus mengetik sendiri satu kata yang paling cocok untuk mengisi bagian yang kosong.
+                <br><strong>Mode Pilihan Ganda:</strong> Pilih salah satu dari empat kata yang tersedia. Jika pemain menjawab benar 3 kali berturut-turut, maka pemain tersebut akan dihadapkan dengan soal sulit dengan 2 kata rumpang!
+              </div>
+        </div>
+      </div>
+    </div>
         </div>
       </div>
 
@@ -688,7 +849,32 @@ function tick(){{
 }}
 document.addEventListener("DOMContentLoaded", ()=>{{
   setStep("home");
-  $("btn-to-mode-select").onclick = () => setStep('mode-select');
+  
+  // Handle mode selection and direct game start
+  document.querySelectorAll('.mode-btn').forEach(btn => {{
+      btn.onclick = async () => {{
+          // Get player names from input fields
+          const p1Name = $("player1-name").value.trim() || "Pemain 1";
+          const p2Name = $("player2-name").value.trim() || "Pemain 2";
+          
+          // Set current mode
+          currentMode = btn.dataset.mode;
+          
+          // Set player names
+          playerNames = {{ p1: p1Name, p2: p2Name }};
+          
+          // Start the game directly
+          const body = {{ players: [p1Name, p2Name], mode: currentMode }};
+          const r = await fetch("/session", {{method:"POST", headers:{{"Content-Type":"application/json"}}, body:JSON.stringify(body)}});
+          const js = await r.json();
+          if(!js.session_id){{ alert("Gagal membuat sesi"); return; }}
+          sessionId = js.session_id; index = 1;
+          setStep("play");
+          await loadQuestion();
+      }}
+  }});
+  
+  // Keep existing mode selection functionality for backward compatibility
   document.querySelectorAll('.mode-button').forEach(btn => {{
       btn.onclick = () => {{
           currentMode = btn.dataset.mode;
