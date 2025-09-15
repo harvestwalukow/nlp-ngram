@@ -1,0 +1,637 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>News N-gram Game (Multi-Mode)</title>
+<link rel="stylesheet" href="./static/styles.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+</head>
+<body>
+  <!-- Floating Particles Background -->
+  <div class="floating-particles" id="particleContainer"></div>
+  
+  <!-- Theme Toggle with Icon -->
+  <button class="theme-toggle" id="themeToggle">💗💚</button>
+  
+  <div class="wrap">
+    <div class="card">
+      <div id="step-home" style="display:none;">
+        <div class="start-header">
+          <h1>
+            News N-gram Game
+          </h1>
+          <div class="player-inputs">
+            <div class="input-group">
+              <input id="player1-name" type="text" value="Pemain 1" maxlength="20" placeholder="Masukkan Nama Pemain 1"/>
+      </div>
+            <div class="input-group">
+              <input id="player2-name" type="text" value="Pemain 2" maxlength="20" placeholder="Masukkan Nama Pemain 2"/>
+            </div>
+          </div>
+      <div class="mode-selection">
+            <button class="mode-btn" data-mode="uraian">
+              <i class="fas fa-pen game-icon"></i>
+              Mode Uraian
+            </button>
+            <button class="mode-btn" data-mode="pilihan_ganda">
+              <i class="fas fa-check-circle game-icon"></i>
+              Mode Pilihan Ganda
+            </button>
+      </div>
+    </div>
+    
+        <div class="start-rules">
+        <div class="rules-grid">
+          <div class="rule-item">
+              <div class="rule-number">
+                <i class="fas fa-user" style="font-size: 24px;"></i>
+              </div>
+            <div class="rule-text">Setiap pemain menjawab 7 pertanyaan</div>
+          </div>
+          <div class="rule-item">
+              <div class="rule-number">
+                <i class="fas fa-clock" style="font-size: 24px;"></i>
+              </div>
+            <div class="rule-text">10 detik per pertanyaan</div>
+          </div>
+          <div class="rule-item">
+              <div class="rule-number">
+                <i class="fas fa-trophy" style="font-size: 24px;"></i>
+              </div>
+              <div class="rule-text">Maksimal 100 poin per pertanyaan</div>
+          </div>
+          <div class="rule-item">
+              <div class="rule-number">
+                <i class="fas fa-medal" style="font-size: 24px;"></i>
+              </div>
+              <div class="rule-text">Skor tertinggi memenangkan permainan</div>
+        </div>
+      </div>
+      
+      <div class="mode-descriptions">
+        <div class="mode-desc">
+              <div class="mode-desc-text">
+                <strong>Mode Uraian:</strong> Pemain harus mengetik sendiri satu kata yang paling cocok untuk mengisi bagian yang kosong pada judul berita.
+                <br><br><strong>Mode Pilihan Ganda:</strong> Pilih salah satu dari empat kata yang tersedia. Jika pemain menjawab benar 3 kali berturut-turut, maka pemain tersebut akan dihadapkan dengan soal sulit dengan 2 kata rumpang!
+        </div>
+        </div>
+      </div>
+    </div>
+        </div>
+      </div>
+
+      <div id="step-mode-select" style="display:none;">
+        <h2>Pilih Mode Permainan</h2>
+        <div class="center-row">
+            <button class="mode-button" data-mode="uraian">Mode Uraian</button>
+            <button class="mode-button" data-mode="pilihan_ganda">Mode Pilihan Ganda</button>
+        </div>
+      </div>
+
+      <div id="step-player-setup" style="display:none;">
+        <h2 id="setup-title">Masukkan Nama Pemain</h2>
+        <div class="row">
+          <div> <label>Nama Pemain 1</label> <input id="p1" type="text" value="Pemain 1" maxlength="20"/> </div>
+          <div> <label>Nama Pemain 2</label> <input id="p2" type="text" value="Pemain 2" maxlength="20"/> </div>
+        </div>
+        <div style="margin-top:12px;"> <button id="btnStart">Mulai Permainan</button> </div>
+      </div>
+
+      <div id="step-play" style="display:none;">
+        <div class="game-status-bar">
+          <div>
+            <i class="fas fa-user game-icon"></i>
+            Giliran: <span id="who" class="pill"></span>
+          </div>
+          <div class="timer-container">
+            <i class="fas fa-hashtag game-icon"></i>
+            <span>Question <span id="qnum"></span></span>
+            <div class="timer-bar">
+              <div class="timer-fill" id="timerFill"></div>
+        </div>
+            <i class="fas fa-clock game-icon"></i>
+            <span class="timer" id="timer"></span>
+          </div>
+        </div>
+        <div id="difficulty-notice" class="special" style="text-align:center; margin-top: 8px; display: none; position: absolute; visibility: hidden;"></div>
+        
+        <!-- This is the new container for the game content -->
+        <div class="game-content-wrapper" id="gameContentWrapper">
+           <div class="question-text mono" id="questionText"></div>
+           
+           <div id="ui-pilihan-ganda" style="display:none;">
+               <div id="choicesBox1" class="choicesContainer"></div>
+               <div id="hardQuestionControls">
+                   <div class="hard-choices">
+                     <div class="hard-choices-label">
+                       <i class="fas fa-pen game-icon"></i>
+                       First Word Choice
+                     </div>
+                     <div id="choicesBox2" class="choicesContainer"></div>
+                   </div>
+                   <div class="hard-choices">
+                     <div class="hard-choices-label">
+                       <i class="fas fa-pen game-icon"></i>
+                       Second Word Choice
+                     </div>
+                     <div id="choicesBox3" class="choicesContainer"></div>
+                   </div>
+                   <button id="submitHard" disabled>
+                     <i class="fas fa-paper-plane game-icon"></i>
+                     Submit Double Answer
+                   </button>
+               </div>
+           </div>
+   
+           <div id="ui-uraian" style="display:none;">
+               <form id="answerForm">
+                   <label for="answer-input">
+                     <i class="fas fa-pen game-icon"></i>
+                     Your Answer (1 word)
+                   </label>
+                   <input id="answer-input" type="text" autocomplete="off" placeholder="Type your answer and press Enter..." maxlength="40"/>
+                   <div style="margin-top:20px;">
+                     <button type="submit">
+                       <i class="fas fa-paper-plane game-icon"></i>
+                       Submit Answer
+                     </button>
+                   </div>
+               </form>
+           </div>
+        </div>
+
+        <div id="feedback" style="margin-top:24px;"></div>
+      </div>
+
+      <div id="step-result" style="display:none;">
+        <h3>
+          <i class="fas fa-trophy game-icon-large"></i>
+          Final Results
+        </h3>
+        <div id="resultBox" class="mono"></div>
+        <div style="margin-top:24px;"> 
+          <button onclick="location.reload()">
+            <i class="fas fa-redo game-icon"></i>
+            Play Again
+          </button> 
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="overlay" id="switchOverlay">
+    <div class="panel"> <h2 id="switchTitle"></h2> <div class="desc">Bersiap... game akan lanjut dalam <span id="switchCountdown"></span> detik.</div> </div>
+  </div>
+
+  <div class="news-ticker-container">
+    <div class="news-ticker" id="newsTicker">
+      <!-- Content will be dynamically inserted here by JavaScript -->
+    </div>
+  </div>
+
+<script>
+const TRANSITION_TIME = 5;
+const QUESTIONS_PER_PLAYER = 7;
+const TOTAL_QUESTIONS = QUESTIONS_PER_PLAYER * 2; 
+let sessionId = null, index = 1, currentQ = null, timerId = null, deadline = 0, currentMode = null;
+let playerNames = {}, selections = {};
+
+function $(id){ return document.getElementById(id); }
+function setStep(step){
+  ['home', 'mode-select', 'player-setup', 'play', 'result'].forEach(s => {
+      $(`step-${s}`).style.display = (s === step) ? 'block' : 'none';
+  });
+  
+  // Add/remove playing class for card styling
+  const card = document.querySelector('.card');
+  if (card) {
+    if (step === 'play') {
+      card.classList.add('playing');
+    } else {
+      card.classList.remove('playing');
+    }
+  }
+  
+  const newsTicker = document.querySelector('.news-ticker-container');
+  if (newsTicker) {
+    if (step === 'play') {
+      newsTicker.style.display = 'none';
+    } else {
+      newsTicker.style.display = 'flex';
+    }
+  }
+}
+async function startGame(){
+  const p1 = $("p1").value.trim() || "Pemain 1";
+  const p2 = $("p2").value.trim() || "Pemain 2";
+  playerNames = { p1, p2 };
+  const body = { players:[p1, p2], mode: currentMode };
+  const r = await fetch("/session",{method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
+  const js = await r.json();
+  if(!js.session_id){ alert("Gagal membuat sesi"); return; }
+  sessionId = js.session_id; index = 1;
+  setStep("play");
+  await loadQuestion();
+}
+async function loadQuestion(){
+  clearInterval(timerId);
+  $("feedback").innerHTML = ""; 
+  const difficultyNotice = $("difficulty-notice");
+  difficultyNotice.innerHTML = ""; 
+  difficultyNotice.style.display = "none";
+  difficultyNotice.style.visibility = "hidden";
+  difficultyNotice.style.position = "absolute";
+  selections = {};
+  $("who").textContent = playerNames[index <= TOTAL_QUESTIONS/2 ? 'p1' : 'p2'];
+  $("qnum").textContent = `${index}/${TOTAL_QUESTIONS}`;
+  
+  // Reset timer bar
+  const timerFill = $("timerFill");
+  if (timerFill) {
+    timerFill.style.width = '100%';
+    timerFill.classList.remove('warning', 'danger');
+  }
+
+  const r = await fetch(`/question?session_id=${sessionId}&index=${index}`);
+  const js = await r.json();
+  if(js.status!=="ok"){ alert(js.message); return; }
+  currentQ = js;
+  const questionContainer = $("questionText");
+  const gameWrapper = $("gameContentWrapper");
+  const titleText = js.display_title_full || "";
+  
+  if (titleText && titleText.trim().length > 0) {
+    questionContainer.textContent = titleText;
+    gameWrapper.style.display = "block";
+  } else {
+    questionContainer.innerHTML = "";
+    gameWrapper.style.display = "none";
+  }
+
+  if(currentMode === 'pilihan_ganda') {
+    $("ui-pilihan-ganda").style.display = 'block';
+    $("ui-uraian").style.display = 'none';
+    ["choicesBox1", "choicesBox2", "choicesBox3"].forEach(id => $(id).innerHTML = "");
+    if (js.is_hard) {
+        difficultyNotice.innerHTML = `
+          <i class="fas fa-fire game-icon"></i>
+          HARD QUESTION: Choose 2 Words!
+          <i class="fas fa-fire game-icon"></i>
+        `;
+        difficultyNotice.style.display = "block";
+        difficultyNotice.style.visibility = "visible";
+        difficultyNotice.style.position = "static";
+        $("choicesBox1").style.display = "none";
+        $("hardQuestionControls").style.display = "block";
+        js.choices_sets[0].forEach(c => createChoiceButton(c.text, 1, "choicesBox2"));
+        js.choices_sets[1].forEach(c => createChoiceButton(c.text, 2, "choicesBox3"));
+    } else {
+        $("hardQuestionControls").style.display = "none";
+        $("choicesBox1").style.display = "grid";
+        js.choices_sets[0].forEach(c => createChoiceButton(c.text, 1, "choicesBox1"));
+    }
+  } else { // Mode Uraian
+    $("ui-pilihan-ganda").style.display = 'none';
+    $("ui-uraian").style.display = 'block';
+    $("answer-input").value = "";
+    // PERBAIKAN BUG: Aktifkan kembali input untuk soal selanjutnya
+    $("answer-input").disabled = false;
+    $("answer-input").focus();
+  }
+  deadline = js.expires_at*1000;
+  tick();
+  timerId = setInterval(tick, 200);
+}
+function createChoiceButton(text, group, containerId) {
+    const btn = document.createElement("button");
+    btn.className = "choiceBtn"; btn.textContent = text;
+    btn.onclick = () => {
+        if (currentQ.is_hard) { handleHardSelection(btn, group); }
+        else { submitAnswer(text); }
+    };
+    $(containerId).appendChild(btn);
+}
+function handleHardSelection(btn, group) {
+    const containerId = group === 1 ? "choicesBox2" : "choicesBox3";
+    $(containerId).querySelectorAll('.choiceBtn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selections[group] = btn.textContent;
+    $("submitHard").disabled = !(selections[1] && selections[2]);
+}
+$("submitHard").onclick = () => {
+    const combinedAnswer = `${selections[1]}||${selections[2]}`;
+    submitAnswer(combinedAnswer);
+};
+$("answerForm").onsubmit = (e) => {
+    e.preventDefault();
+    const answerText = $("answer-input").value.trim();
+    if(answerText) submitAnswer(answerText);
+};
+async function submitAnswer(answerText){
+  document.querySelectorAll('.choiceBtn').forEach(b => b.disabled = true);
+  $("submitHard").disabled = true;
+  $("answer-input").disabled = true;
+  const isTimeout = !answerText;
+  const payload = { session_id: sessionId, question_id: currentQ.question_id, answer_text: isTimeout ? "" : answerText };
+  const r = await fetch("/answer",{method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(payload)});
+  const js = await r.json();
+  clearInterval(timerId);
+  
+  if (js.status === "ok" || js.status === "timeout") {
+    const score = js.score_bucket;
+    let feedbackHTML = `<div class="${score >= 50 ? 'ok' : 'bad'}">Skor: <b class="score">${score}</b></div>`;
+    if (js.is_hard) {
+        feedbackHTML += `<div class="feedback-text">Jawaban Benar: <b>${js.blank_texts[0]}</b> & <b>${js.blank_texts[1]}</b></div>`;
+        highlightHardChoices(js.blank_texts);
+    } else {
+        feedbackHTML += `<div class="feedback-text">Jawaban Benar: <b>${js.blank_texts[0]}</b></div>`;
+        if (currentMode === 'pilihan_ganda') highlightNormalChoices(js.blank_texts[0]);
+    }
+    $("feedback").innerHTML = feedbackHTML;
+  } else {
+     $("feedback").innerHTML = `<div class="bad">${js.message || "Terjadi kesalahan"}</div>`;
+  }
+  setTimeout(nextStep, 3500);
+}
+function highlightNormalChoices(goldText) {
+    $("choicesBox1").querySelectorAll('.choiceBtn').forEach(b => {
+        if (b.textContent === goldText) b.classList.add('correct');
+        else if (b.classList.contains('selected')) b.classList.add('incorrect');
+    });
+}
+function highlightHardChoices(goldTexts) {
+    [1, 2].forEach((group, i) => {
+        const containerId = `choicesBox${group+1}`;
+        $(containerId).querySelectorAll('.choiceBtn').forEach(b => {
+            if (b.textContent === goldTexts[i]) b.classList.add('correct');
+            else if (b.classList.contains('selected')) b.classList.add('incorrect');
+        });
+    });
+}
+function showSwitchOverlay(nextPlayerName){
+  const ov = $("switchOverlay");
+  $("switchTitle").textContent = `Giliran ${nextPlayerName}`;
+  let remain = TRANSITION_TIME;
+  $("switchCountdown").textContent = remain;
+  ov.style.display = "flex";
+  const iv = setInterval(()=>{
+    remain -= 1;
+    $("switchCountdown").textContent = Math.max(0, remain);
+    if(remain <= 0){
+      clearInterval(iv);
+      ov.style.display = "none";
+      loadQuestion();
+    }
+  }, 1000);
+}
+async function nextStep(){
+  const prevPlayerId = index <= TOTAL_QUESTIONS/2 ? 'p1' : 'p2';
+  index++;
+  if(index > TOTAL_QUESTIONS){
+    const r = await fetch(`/result?session_id=${sessionId}`);
+    const js = await r.json();
+    const p = js.players || [];
+    let resultHTML = p.map(pp => `${pp.name}: [${pp.scores.join(", ")}] &nbsp; <b>Total = ${pp.total}</b>`).join("<br>");
+    const winnerName = (p.find(x => x.id === js.winner) || {}).name;
+    const win = js.is_tie ? "<b>Hasilnya Seri!</b>" : `<b>Pemenang: ${winnerName || "-"}</b>`;
+    $("resultBox").innerHTML = resultHTML + "<br><br>" + win;
+    setStep("result");
+  } else {
+    const nextPlayerId = index <= TOTAL_QUESTIONS/2 ? 'p1' : 'p2';
+    if(prevPlayerId !== nextPlayerId){
+      showSwitchOverlay(playerNames[nextPlayerId]);
+    } else {
+      await loadQuestion();
+    }
+  }
+}
+function tick(){
+  const left = Math.max(0, Math.ceil((deadline - Date.now())/1000));
+  $("timer").textContent = left;
+  
+  // Update timer bar
+  const totalTime = currentQ ? (currentQ.is_hard ? 15 : 10) : 10;
+  const percentage = (left / totalTime) * 100;
+  const timerFill = $("timerFill");
+  
+  if (timerFill) {
+    timerFill.style.width = percentage + '%';
+    
+    // Change color based on time remaining
+    timerFill.classList.remove('warning', 'danger');
+    if (percentage <= 20) {
+      timerFill.classList.add('danger');
+    } else if (percentage <= 40) {
+      timerFill.classList.add('warning');
+    }
+  }
+  
+  if(left<=0){
+    clearInterval(timerId);
+    submitAnswer(null);
+  }
+}
+document.addEventListener("DOMContentLoaded", ()=>{
+  setStep("home");
+  
+  // Initialize floating particles
+  initializeFloatingParticles();
+  initializeNewsTicker();
+  
+  // Theme toggle functionality
+  let isColorfulTheme = false;
+  const themeToggle = $("themeToggle");
+  const body = document.body;
+  
+  themeToggle.onclick = () => {
+    // Add animation classes
+    themeToggle.classList.add('animating');
+    const card = document.querySelector('.card');
+    if (card) {
+      card.classList.add('theme-transitioning');
+    }
+    
+    // Create particle effect
+    createThemeChangeEffect();
+    
+    // Remove animation classes after animation completes
+    setTimeout(() => {
+      themeToggle.classList.remove('animating');
+      if (card) {
+        card.classList.remove('theme-transitioning');
+      }
+    }, 800);
+    
+    // Delay theme change for smooth effect
+    setTimeout(() => {
+      isColorfulTheme = !isColorfulTheme;
+      if (isColorfulTheme) {
+        body.classList.add('colorful-theme');
+        themeToggle.textContent = '🎮';
+      } else {
+        body.classList.remove('colorful-theme');
+        themeToggle.textContent = '💗💚';
+      }
+    }, 100);
+  };
+  
+  // Initialize floating particles background
+  function initializeFloatingParticles() {
+    const container = $("particleContainer");
+    const particleCount = 20;
+    
+    for (let i = 0; i < particleCount; i++) {
+      createFloatingParticle(container, i);
+    }
+  }
+  
+  function initializeNewsTicker() {
+    const titles = [
+      "Percakapan di Rantis saat Lindas Affan Terungkap di Sidang Etik",
+      "Sewa Tembus Rp15 Juta, Gerai UMKM Angkat Kaki dari District Blok M",
+      "Cara Membuat Affidavit untuk Anak Berkewarganegaraan Ganda",
+      "Kemendagri Pasang Target Setoran PNBP Rp 1 Triliun",
+      "Kasus Ojol Affan Tewas Dilindas Rantis Brimob Dilimpahkan ke Bareskrim",
+      "Pimpinan DPR Bakal Koordinasi ke Polri soal Mahasiswa Pendemo yang Ditahan",
+      "NasDem Ungkap Sahroni Belum Ajukan Pengunduran Diri dari DPR",
+      "Gugatan Eks Wamendes soal Isu Ijazah Jokowi Berakhir Damai",
+      "Bareskrim Tangkap TikTokers Hasut Massa Jarah Rumah Puan-Sahroni",
+      "Butuh 1 Miliar Orang Berteriak, Baru Terdengar dari Dalam Gedung DPR",
+      "KPK Dalami Proses Pencairan Biaya Haji 2024 Saat Periksa Kepala BPKH",
+      "DPR Belum Dapat Penjelasan Resmi Rencana Burden Sharing dari BI dan Kemenkeu",
+      "Gerakan Nurani Bangsa Harap 17+8 Tuntutan Rakyat Didengar dan Dikaji",
+      "Seskab: Prabowo Kurang dari 8 Jam di China, Kembali ke RI Malam Ini",
+      "Bantahan Trump Tepis Spekulasi Liar terkait Kesehatan",
+      "DPR Bakal Gelar Rapat Evaluasi Bahas 17+8 Tuntutan Rakyat",
+      "ICMI: Kemarahan Publik Berakar dari Kondisi Ekonomi",
+      "Polisi Tangkap 2 Pemilik Akun yang Ubah Larangan Pelajar Ikut Demo Buruh",
+      "Beras SPHP Masuk Ritel Modern, Harga Rp 62.500",
+      "Bapanas: Penyaluran Beras SPHP di Ritel Modern Segera Dimasifkan",
+      "Polri Pecat Kompol Cosmas Terkait Kasus Tewasnya Affan Kurniawan",
+      "Hasut Massa Demo di Bandara Soetta, Pemilik Akun TikTok Ditangkap Polisi",
+      "Kasus Affan Masuk Pidana, Berkas Perkara Dilimpahkan ke Bareskrim",
+      "Pasar Sambut Antusias Obligasi dan Sukuk Berkelanjutan Pegadaian",
+      "Laras Faizati Jadi Tersangka Buntut Konten Ajakan Bakar Mabes Polri Saat Aksi",
+      "Apa Itu KTP Pink? Simak Kegunaan dan Bedanya dengan KTP Biru",
+      "Presiden Prabowo Tiba di Indonesia Usai Kunjungan 8 Jam di China",
+      "Polri Sebut Kompol Cosmas Tak Profesional Saat Pengamanan Unjuk Rasa",
+      "Jatam Respons Pernyataan Gubernur Sulteng Soal Tambang Ilegal",
+      "Polisi dan TNI Patroli Skala Besar Pastikan Kota Dumai Aman",
+      "Proyek Pipa Transmisi Gas Cisem Lanjut ke Bandung, Solo, Yogyakarta",
+      "Wapres Gibran Digugat ke PN Jakpus soal Ijazah SMA Sederajat",
+      "Puluhan Rumah Dinas Polisi di Serpong Terbakar, Diduga Akibat Korsleting",
+      "Polri Tetapkan 7 Tersangka Pemilik Akun Medsos Provokasi Terkait Kericuhan",
+      "Dana Transfer ke Daerah Turun Banyak di 2026, Kemendagri Siapkan Langkah Ini",
+      "Ombudsman Sebut Kualitas Beras SPHP Bulog Sering Dikeluhkan Konsumen",
+      "Kompol Cosmas Nangis Usai Dipecat, Klaim Tak Tahu Lindas Ojol Affan",
+      "Sinergi CNBM dan ASEAN: Menuju Ekonomi Hijau dan Masa Depan Berkelanjutan",
+      "Cara Apply Kartu Kredit yang Cepat dan Mudah Disetujui, Cukup 5 Menit!",
+      "Dasco: Revisi KUHAP Harus Segera Selesai Supaya RUU Perampasan Aset Bisa Dibahas",
+      "Ketua HIPKI Dorong Pelaku hingga Provokator Demo Anarkis"
+    ];
+    const ticker = $("newsTicker");
+    const separator = " <span class='separator'>||</span> ";
+    
+    // Clear existing content
+    ticker.innerHTML = "";
+    
+    // Create the content string with all titles
+    let content = "";
+    titles.forEach(title => {
+      content += `<span class="news-item">${title}</span>${separator}`;
+    });
+
+    // Create two identical content containers for seamless loop
+    const tickerContent1 = document.createElement('div');
+    tickerContent1.className = 'news-ticker-content';
+    tickerContent1.innerHTML = content;
+    
+    const tickerContent2 = document.createElement('div');
+    tickerContent2.className = 'news-ticker-content';
+    tickerContent2.innerHTML = content;
+
+    // Append both content divs to create seamless loop
+    ticker.appendChild(tickerContent1);
+    ticker.appendChild(tickerContent2);
+  }
+
+  function createFloatingParticle(container, index) {
+    const particle = document.createElement('div');
+    particle.className = 'particle';
+    particle.style.left = Math.random() * 100 + '%';
+    particle.style.animationDelay = Math.random() * 15 + 's';
+    particle.style.animationDuration = (15 + Math.random() * 10) + 's';
+    container.appendChild(particle);
+    
+    // Restart particle when animation ends
+    particle.addEventListener('animationend', () => {
+      particle.style.left = Math.random() * 100 + '%';
+      particle.style.animationDelay = '0s';
+    });
+  }
+  
+  // Theme change particle effect
+  function createThemeChangeEffect() {
+    const effectContainer = document.createElement('div');
+    effectContainer.className = 'theme-particles';
+    document.body.appendChild(effectContainer);
+    
+    // Create burst of particles
+    for (let i = 0; i < 15; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'particle';
+      particle.style.left = Math.random() * 100 + '%';
+      particle.style.top = '100vh';
+      particle.style.background = isColorfulTheme ? 
+        'linear-gradient(45deg, #4f46e5, #06d6a0)' : 
+        'linear-gradient(45deg, #f784c5, #fbbf24)';
+      particle.style.animationDelay = Math.random() * 0.3 + 's';
+      particle.style.animationDuration = '1.5s';
+      effectContainer.appendChild(particle);
+    }
+    
+    // Remove effect container after animation
+    setTimeout(() => {
+      if (document.body.contains(effectContainer)) {
+        document.body.removeChild(effectContainer);
+      }
+    }, 1500);
+  }
+  
+  // Handle mode selection and direct game start
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.onclick = async () => {
+          // Get player names from input fields
+          const p1Name = $("player1-name").value.trim() || "Pemain 1";
+          const p2Name = $("player2-name").value.trim() || "Pemain 2";
+          
+          // Set current mode
+          currentMode = btn.dataset.mode;
+          
+          // Set player names
+          playerNames = { p1: p1Name, p2: p2Name };
+          
+          // Start the game directly
+          const body = { players: [p1Name, p2Name], mode: currentMode };
+          const r = await fetch("/session", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
+          const js = await r.json();
+          if(!js.session_id){ alert("Gagal membuat sesi"); return; }
+          sessionId = js.session_id; index = 1;
+          setStep("play");
+          await loadQuestion();
+      }
+  });
+  
+  // Keep existing mode selection functionality for backward compatibility
+  document.querySelectorAll('.mode-button').forEach(btn => {
+      btn.onclick = () => {
+          currentMode = btn.dataset.mode;
+          $("setup-title").textContent = `Masukkan Nama Pemain (Mode ${(currentMode === 'uraian' ? 'Uraian' : 'Pilihan Ganda')})`;
+          setStep('player-setup');
+      }
+  });
+  $("btnStart").onclick = startGame;
+});
+</script>
+</body>
+</html>
