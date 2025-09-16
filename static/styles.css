@@ -1091,28 +1091,36 @@ body.colorful-theme::before {
 }
 
 .colorful-theme .card {
-  background: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.05)
+  );
   border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #000000;
+  color: #ffffff;
   backdrop-filter: blur(20px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-intense), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
 .colorful-theme h1,
 .colorful-theme h2,
 .colorful-theme h3 {
-  color: #1b602f;
+  color: #ffffff;
 }
 
 .colorful-theme .start-header {
-  background: rgba(255, 255, 255, 0.95);
-  border: none;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.1),
+    rgba(255, 255, 255, 0.05)
+  );
+  border: 2px solid rgba(37, 99, 235, 0.3);
+  box-shadow: var(--shadow-intense);
+  backdrop-filter: blur(20px);
 }
 
 .colorful-theme .start-header h1 {
-  color: #1b602f;
+  color: #ffffff;
   font-weight: 700;
 }
 
@@ -1154,10 +1162,15 @@ body.colorful-theme::before {
 }
 
 .colorful-theme .start-rules {
-  background: rgba(255, 255, 255, 0.95);
-  border: none;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(10px);
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.08),
+    rgba(255, 255, 255, 0.03)
+  );
+  color: #ffffff;
+  border: 2px solid rgba(37, 99, 235, 0.3);
+  backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-glow);
 }
 
 .colorful-theme .rule-number {
@@ -1167,15 +1180,15 @@ body.colorful-theme::before {
 }
 
 .colorful-theme .rule-text {
-  color: #000000;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .colorful-theme .mode-desc-text {
-  color: #000000;
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .colorful-theme .mode-desc-text strong {
-  color: #f784c5;
+  color: #ffffff;
 }
 
 .colorful-theme button {
@@ -1348,8 +1361,8 @@ body.colorful-theme::before {
 }
 
 .colorful-theme #ui-uraian input {
-  color: #000000 !important;
-  background: rgba(255, 255, 255, 0.95) !important;
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.1) !important;
 }
 
 .colorful-theme h3 {
@@ -1876,6 +1889,36 @@ body.colorful-theme::before {
   }
 }
 
+/* Force input styling for all input types and IDs */
+input[type="text"],
+#player1-name,
+#player2-name {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.colorful-theme input[type="text"],
+.colorful-theme #player1-name,
+.colorful-theme #player2-name {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+}
+
+.colorful-theme input[type="text"]:focus,
+.colorful-theme #player1-name:focus,
+.colorful-theme #player2-name:focus {
+  background: rgba(255, 255, 255, 0.15) !important;
+  color: #ffffff !important;
+}
+
+.colorful-theme input[type="text"]::placeholder,
+.colorful-theme #player1-name::placeholder,
+.colorful-theme #player2-name::placeholder {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
 /* Mobile-specific colorful theme fixes */
 @media (max-width: 768px) {
   .colorful-theme body {
@@ -1885,16 +1928,27 @@ body.colorful-theme::before {
   }
 
   .colorful-theme .card {
-    background: rgba(255, 255, 255, 0.08) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    background: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.1),
+      rgba(255, 255, 255, 0.05)
+    ) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
     color: #ffffff !important;
-    backdrop-filter: blur(15px) !important;
+    backdrop-filter: blur(20px) !important;
+    box-shadow: var(--shadow-intense), inset 0 1px 0 rgba(255, 255, 255, 0.1) !important;
   }
 
   .colorful-theme .start-header {
-    background: rgba(255, 255, 255, 0.08) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    background: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.1),
+      rgba(255, 255, 255, 0.05)
+    ) !important;
+    border: 2px solid rgba(37, 99, 235, 0.3) !important;
     color: #ffffff !important;
+    backdrop-filter: blur(20px) !important;
+    box-shadow: var(--shadow-intense) !important;
   }
 
   .colorful-theme .start-header h1 {
@@ -1902,14 +1956,24 @@ body.colorful-theme::before {
   }
 
   .colorful-theme .start-rules {
-    background: rgba(255, 255, 255, 0.08) !important;
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    background: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.08),
+      rgba(255, 255, 255, 0.03)
+    ) !important;
+    border: 2px solid rgba(37, 99, 235, 0.3) !important;
     color: #ffffff !important;
+    backdrop-filter: blur(20px) !important;
+    box-shadow: var(--shadow-glow) !important;
   }
 
   .colorful-theme .rule-item {
-    background: rgba(247, 132, 197, 0.1) !important;
-    border: 1px solid rgba(6, 214, 160, 0.15) !important;
+    background: linear-gradient(
+      145deg,
+      rgba(37, 99, 235, 0.1),
+      rgba(30, 64, 175, 0.1)
+    ) !important;
+    border: 1px solid rgba(6, 214, 160, 0.2) !important;
   }
 
   .colorful-theme .rule-text {
@@ -1924,13 +1988,21 @@ body.colorful-theme::before {
     color: #ffffff !important;
   }
 
-  .colorful-theme .input-group input {
+  .colorful-theme .input-group input,
+  .colorful-theme input[type="text"],
+  .colorful-theme #player1-name,
+  .colorful-theme #player2-name,
+  .colorful-theme #answer-input {
     background: rgba(255, 255, 255, 0.1) !important;
     color: #ffffff !important;
     border: 1px solid rgba(255, 255, 255, 0.3) !important;
   }
 
-  .colorful-theme .input-group input::placeholder {
+  .colorful-theme .input-group input::placeholder,
+  .colorful-theme input[type="text"]::placeholder,
+  .colorful-theme #player1-name::placeholder,
+  .colorful-theme #player2-name::placeholder,
+  .colorful-theme #answer-input::placeholder {
     color: rgba(255, 255, 255, 0.6) !important;
   }
 
@@ -1945,10 +2017,6 @@ body.colorful-theme::before {
     background-color: transparent !important;
   }
 
-  .colorful-theme .card,
-  .colorful-theme .start-header,
-  .colorful-theme .start-rules,
-  .colorful-theme .rule-item,
   .colorful-theme .mode-btn {
     background: rgba(255, 255, 255, 0.08) !important;
   }
@@ -1967,7 +2035,11 @@ body.colorful-theme::before {
     gap: 15px;
   }
 
-  .input-group input {
+  .input-group input,
+  input[type="text"],
+  #player1-name,
+  #player2-name,
+  #answer-input {
     padding: 15px 20px !important;
     font-size: 16px !important;
     border-radius: 8px !important;
@@ -1976,11 +2048,19 @@ body.colorful-theme::before {
     border: 1px solid rgba(255, 255, 255, 0.2) !important;
   }
 
-  .input-group input:focus {
+  .input-group input:focus,
+  input[type="text"]:focus,
+  #player1-name:focus,
+  #player2-name:focus,
+  #answer-input:focus {
     background: rgba(255, 255, 255, 0.12) !important;
   }
 
-  .input-group input::placeholder {
+  .input-group input::placeholder,
+  input[type="text"]::placeholder,
+  #player1-name::placeholder,
+  #player2-name::placeholder,
+  #answer-input::placeholder {
     color: rgba(255, 255, 255, 0.6) !important;
   }
 
