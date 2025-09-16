@@ -1118,15 +1118,19 @@ body.colorful-theme::before {
 
 .colorful-theme .input-group input {
   border: 1px solid rgba(27, 96, 47, 0.3);
-  background: rgba(255, 255, 255, 0.9);
-  color: #000000;
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
   backdrop-filter: blur(5px);
 }
 
 .colorful-theme .input-group input:focus {
   border-color: #1b602f;
   box-shadow: 0 0 0 3px rgba(27, 96, 47, 0.15);
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.colorful-theme .input-group input::placeholder {
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .colorful-theme .mode-btn {
@@ -1921,7 +1925,7 @@ body.colorful-theme::before {
   }
 
   .colorful-theme .input-group input {
-    background: rgba(255, 255, 255, 0.15) !important;
+    background: rgba(255, 255, 255, 0.1) !important;
     color: #ffffff !important;
     border: 1px solid rgba(255, 255, 255, 0.3) !important;
   }
@@ -1945,10 +1949,12 @@ body.colorful-theme::before {
   .colorful-theme .start-header,
   .colorful-theme .start-rules,
   .colorful-theme .rule-item,
-  .colorful-theme .mode-btn,
-  .colorful-theme .input-group input,
-  .colorful-theme .titlebox {
+  .colorful-theme .mode-btn {
     background: rgba(255, 255, 255, 0.08) !important;
+  }
+
+  .colorful-theme .input-group input {
+    background: rgba(255, 255, 255, 0.1) !important;
   }
 
   .colorful-theme .titlebox {
@@ -1965,6 +1971,17 @@ body.colorful-theme::before {
     padding: 15px 20px !important;
     font-size: 16px !important;
     border-radius: 8px !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  }
+
+  .input-group input:focus {
+    background: rgba(255, 255, 255, 0.12) !important;
+  }
+
+  .input-group input::placeholder {
+    color: rgba(255, 255, 255, 0.6) !important;
   }
 
   .mode-btn {
